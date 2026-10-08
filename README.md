@@ -1,8 +1,16 @@
 # Agentik
 
-Agente personal de escritorio para macOS. Un personaje flotante observa tu trabajo, recuerda lo que le pides y puede modificar archivos cuando lo autorizas.
+Agente personal de escritorio para macOS. Un personaje flotante que hace tareas por ti en tu Mac (organizar archivos, ejecutar comandos), recuerda lo que apruebas y, si tú lo activas, observa en qué trabajas para ayudarte mejor.
 
-Estado: **en desarrollo (v0.1)**. Solo macOS. El agente puede ejecutar comandos y modificar archivos: lee [Seguridad y advertencias](#seguridad-y-advertencias) antes de usarlo.
+Versión actual: **0.2.1**. Solo macOS. Las novedades de cada versión están en [Releases](https://github.com/kitifica-max/Agentik/releases). El agente puede ejecutar comandos y modificar archivos: lee [Seguridad y advertencias](#seguridad-y-advertencias) antes de usarlo.
+
+## Qué hace
+
+- **Ejecuta tareas** con el modelo que elijas (Claude, una API compatible con OpenAI o un modelo local de Ollama): organiza carpetas, mueve y copia archivos, escribe archivos y corre comandos de shell. Trabaja solo, sin pedirte permiso en cada paso (ver [Seguridad y advertencias](#seguridad-y-advertencias)).
+- **Comandos sin tokens:** unas palabras clave se resuelven en tu Mac, sin llamar al modelo: `resumen` (qué avanzaste hoy), `retoma` (dónde te quedaste en tus proyectos de git), `espacio` (qué ocupa tu disco y qué se puede liberar), `limpia` (borra de forma definitiva solo lo regenerable que mostró `espacio`: cachés y archivos de desarrollo, y vacía la Papelera; únicamente dentro de tu carpeta personal), `gasto` (cuánto llevas gastado) y `aprende` (propone recuerdos de tus proyectos y hábitos).
+- **Observa solo si lo activas** (ver [Activar el observador](#activar-el-observador)).
+- **Recuerda solo lo que apruebas** (pestaña Memoria).
+- **Muestra el gasto** estimado en el pie de la burbuja (los modelos locales cuestan $0).
 
 ## Descargar
 
@@ -75,25 +83,20 @@ Al aceptar una sugerencia, se abre como chat con la IA. Al descartar, se suprime
 
 ## Herramientas de archivo
 
-Agentik puede proponer ediciones a archivos dentro de las carpetas autorizadas. Toda escritura requiere aprobación explícita.
+El agente organiza y modifica archivos **dentro de las carpetas autorizadas** (pestaña **Archivos**) y lo hace directamente, sin aprobación paso a paso. Herramientas: crear carpeta, mover (uno o varios), copiar, escribir archivo, listar, leer y organizar una carpeta por reglas.
 
-**Flujo**:
-1. El AI propone una edición (via chat) → aparece en pestaña **Archivos** con diff preview.
-2. Revisas el diff (líneas verdes = añadidas, rojas = eliminadas).
-3. **Aprobar**: crea backup del original en `~/Library/Application Support/agetik/backups/`, luego escribe.
-4. **Rechazar**: no se toca el archivo.
-
-**Restricciones de seguridad**:
-- Solo archivos dentro de `allowed_folders` (config.json).
-- Nunca toca: `.env`, claves SSH, `.pem`, credenciales, archivos ocultos de configuración.
-- Nunca borra archivos.
-- Cada acción se registra en el audit log (tabla `audit_log` en la DB).
+- **Antes de sobrescribir** un archivo guarda una copia del original en `~/Library/Application Support/agetik/backups/`. Mover y copiar nunca pisan un destino que ya existe.
+- **Archivos sensibles:** nunca toca `.env`, claves SSH, `.pem`, credenciales ni archivos ocultos de configuración.
+- **Carpetas:** solo las que autorizas, y con [tope](#seguridad-y-advertencias): nunca el disco entero ni carpetas del sistema.
+- **Borrar:** no tiene herramienta de borrado y por instrucción mueve a la Papelera. Ojo: con el shell libre podría hacer más (ver [Seguridad y advertencias](#seguridad-y-advertencias)). `limpia` es aparte y solo actúa tras tu `espacio`.
+- **Registro:** cada operación queda en la pestaña **Archivos** y en el audit log (tabla `audit_log`).
+- **Detener:** `Esc` o el botón **Detener** cortan lo que esté en curso.
 
 ## Permisos de macOS
 
 - **Accesibilidad**: necesario para leer el título de la ventana activa. Sin él, Agentik solo ve el nombre de la app. Ajustes del Sistema → Privacidad y seguridad → Accesibilidad → activa Agentik.
 - **Automatización (System Events)**: macOS puede pedirlo al primer uso.
-- **Grabación de pantalla**: solo para capturas bajo petición (Fase 2).
+- **Grabación de pantalla**: Agentik no la usa.
 - **Acceso a carpetas**: Agentik solo vigila las carpetas que tú agregues desde la app.
 
 La app detecta permisos faltantes y lo indica en la burbuja.
@@ -168,7 +171,7 @@ En la pestaña **Modelo** eliges con qué modelo trabaja Agentik (el cambio apli
 
 **Qué no se registra nunca**
 - Pulsaciones de teclado.
-- Contenido de la pantalla. Las capturas son solo bajo petición (Fase 2) y no se guardan en disco.
+- Contenido de la pantalla: no se captura.
 - Contenido de archivos, fuera o dentro de las carpetas autorizadas.
 - Apps y títulos excluidos. Se descartan antes de tocar la base de datos.
 - Archivos sensibles: `.env`, claves SSH, `.pem`, credenciales y archivos ocultos.
@@ -179,7 +182,7 @@ En la pestaña **Modelo** eliges con qué modelo trabaja Agentik (el cambio apli
 
 **Dónde se guarda**
 - Base de datos SQLite local: `~/Library/Application Support/agetik/agetik.db`.
-- Nada sale del equipo, salvo las llamadas al modelo en fases 2+, que envían solo resúmenes compactos.
+- Nada sale del equipo, salvo lo que se envía al modelo que elijas (ver [Seguridad y advertencias](#seguridad-y-advertencias)). Con un modelo local no sale nada.
 
 **Cuánto dura**
 - Eventos de actividad: 24 horas por defecto (`retention_hours` en `config.json`). Una tarea horaria borra lo vencido.
@@ -208,16 +211,21 @@ El **código** es [MIT](LICENSE). Las **ilustraciones** de los avatares no está
 
 ```
 src/
-  main/        observador, ventanas, IPC, configuración
-  observer/    ventana activa, filtros, retención, archivos
-  memory/      memoria de hechos (Fase 2)
-  suggestions/ motor de sugerencias (Fase 3)
-  files/       herramientas de archivos (Fase 4)
-  ai/          cliente de Anthropic (Fase 2)
+  main/        ventanas, IPC, configuración, avisos, secretos (Llavero)
+  observer/    ventana activa, filtros, retención, vigilante de archivos
+  memory/      recuerdos, filtro de datos sensibles, aprendizaje de proyectos y hábitos
+  suggestions/ sugerencias proactivas
+  files/       herramientas de archivos
+  shell/       comandos de shell con red de seguridad
+  ai/          modelos (Anthropic, OpenAI-compatible, Ollama), agente con herramientas, costos
+  chat/        historial persistente y cancelación
+  disk/ git/ summary/   comandos locales: espacio y limpia, retoma, resumen
   db/          SQLite
-  renderer/    personaje, burbuja, estilos (JS plano)
+  renderer/    personaje, burbuja, guía de inicio, avatares (JS plano)
   preload/     puente IPC con allowlist
-  shared/      tipos y canales IPC
-tests/         pruebas
-assets/        avatar
+  shared/      tipos, canales IPC y reglas de carpetas
+tests/         pruebas (vitest)
+assets/        avatares (SVG)
+scripts/       iconos y capas de los avatares
+tools/         demo de animaciones
 ```
