@@ -32,6 +32,8 @@
       "package.json"
     ],
     "mac": {
+      "identity": "-",
+      "hardenedRuntime": false,
       "icon": "build/icon.icns",
       "category": "public.app-category.productivity",
       "target": [

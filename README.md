@@ -16,7 +16,11 @@ Versión actual: **0.2.1**. Solo macOS. Las novedades de cada versión están en
 
 Los instaladores van publicados por versión en **[Releases](https://github.com/kitifica-max/Agentik/releases)**. Descarga el `.dmg` más reciente, ábrelo y arrastra **Agentik** a Aplicaciones. Cada versión indica su suma de verificación (SHA-256).
 
-> La app no está firmada ni notarizada: si macOS la bloquea, ábrela con clic derecho o ejecuta `xattr -cr /Applications/Agentik.app`. Antes de usarla lee [Seguridad y advertencias](#seguridad-y-advertencias).
+> **La app no está notarizada por Apple** (eso requiere una cuenta de desarrollador de pago), así que macOS la bloquea la primera vez. Para abrirla, una de dos:
+> 1. En Terminal: `xattr -cr /Applications/Agentik.app` y ábrela normal.
+> 2. Intenta abrirla, luego **Ajustes del Sistema → Privacidad y seguridad → Abrir de todos modos**.
+>
+> Si dice que está "dañada", es ese mismo bloqueo (o un `.dmg` descargado a medias): usa el comando de arriba. Antes de usarla lee [Seguridad y advertencias](#seguridad-y-advertencias).
 
 La primera vez, abre la pestaña **Modelo**, edita el modelo y pega tu API key (o agrega uno local de Ollama).
 
@@ -201,7 +205,7 @@ En la pestaña **Modelo** eliges con qué modelo trabaja Agentik (el cambio apli
 - **Lo que se envía fuera:** tus mensajes y el contexto (actividad reciente, listados de carpetas y el contenido de los archivos que el modelo lea) van al proveedor del modelo que elijas (Anthropic, una API compatible con OpenAI, o Ollama en la nube). Con un modelo **local** de Ollama no sale nada de tu Mac.
 - **API keys:** se guardan cifradas con el Llavero de macOS, nunca en el repo, la base de datos ni los logs.
 - **Sin telemetría.** Todo (observador, memoria, hábitos) queda en tu equipo.
-- **App sin firmar:** el `.dmg` no está firmado ni notarizado. Si macOS la bloquea, ábrela con clic derecho o ejecuta `xattr -cr /Applications/Agentik.app`.
+- **App sin notarizar:** la firma es local (ad-hoc), no de un desarrollador registrado en Apple. Si macOS la bloquea o dice que está "dañada", ejecuta `xattr -cr /Applications/Agentik.app`.
 
 ## Licencia y créditos
 
