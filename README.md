@@ -4,7 +4,15 @@ Agente personal de escritorio para macOS. Un personaje flotante observa tu traba
 
 Estado: **en desarrollo (v0.1)**. Solo macOS. El agente puede ejecutar comandos y modificar archivos: lee [Seguridad y advertencias](#seguridad-y-advertencias) antes de usarlo.
 
-## Instalación
+## Descargar
+
+Los instaladores van publicados por versión en **[Releases](https://github.com/kitifica-max/Agentik/releases)**. Descarga el `.dmg` más reciente, ábrelo y arrastra **Agentik** a Aplicaciones. Cada versión indica su suma de verificación (SHA-256).
+
+> La app no está firmada ni notarizada: si macOS la bloquea, ábrela con clic derecho o ejecuta `xattr -cr /Applications/Agentik.app`. Antes de usarla lee [Seguridad y advertencias](#seguridad-y-advertencias).
+
+La primera vez, abre la pestaña **Modelo**, edita el modelo y pega tu API key (o agrega uno local de Ollama).
+
+## Desarrollo
 
 ```bash
 npm install
@@ -14,6 +22,14 @@ npm run build      # genera .dmg en release/
 ```
 
 Requisitos: macOS 13+, Node 22+.
+
+### Publicar una versión
+
+```bash
+npm version patch                 # sube la versión en package.json (minor/major según el cambio) y crea el tag
+npm run build                     # genera release/Agentik-<versión>-*.dmg
+gh release create v<versión> release/Agentik-<versión>*.dmg --generate-notes
+```
 
 ## Configuración de la API key
 
