@@ -11,6 +11,8 @@ import { registerIpc } from './ipc.js';
 import { IPC } from '../shared/ipc-channels.js';
 import { AiClient } from '../ai/client.js';
 import { proposeMemory, approveMemory, rejectMemory, deleteMemory, listMemories } from '../memory/memory.js';
+import { SuggestionEngine, type Suggestion } from '../suggestions/engine.js';
+import { proposeFileEdit, approveFileEdit, rejectFileEdit, listFileEdits, getAuditLog } from '../files/fileTools.js';
 import type { CharacterState, Config, MemoryTipo, ObserverStatus } from '../shared/types.js';
 
 loadEnv();
@@ -25,6 +27,10 @@ let db: Db;
 let observer: Observer;
 let config: Config;
 let ai: AiClient;
+let suggestions: SuggestionEngine;
+let activeSuggestion: Suggestion | null = null;
+let backupDir: string;
+const SUGGESTION_POLL_MS = 30_000;
 
 function savedPosition(): { x: number; y: number } {
   const raw = getState(db, 'window_position');
@@ -138,7 +144,18 @@ async function handleChat(msg: string): Promise<{ reply: string }> {
       }
     }
 
-    return { reply: result.reply };
+    // Parse file edit proposals from AI response
+    const editMatch = result.reply.match(/\[FILE_EDIT:(.+?)\]([\s\S]+?)\[\/FILE_EDIT\]/);
+    if (editMatch) {
+      const editResult = proposeFileEdit(db, config, editMatch[1], editMatch[2]);
+      if ('id' in editResult) {
+        setCharacterState('esperando-aprobacion');
+        bubble?.webContents.send(IPC.fileEditProposed, editResult);
+      }
+    }
+
+    const cleanReply = result.reply.replace(/\[FILE_EDIT:.+?\][\s\S]+?\[\/FILE_EDIT\]/g, '').trim();
+    return { reply: cleanReply || result.reply };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Error desconocido';
     return { reply: `Error: ${message}` };
@@ -148,13 +165,38 @@ async function handleChat(msg: string): Promise<{ reply: string }> {
   }
 }
 
+function evaluateSuggestions(): void {
+  if (!observer.isActive) return;
+  const s = suggestions.evaluate();
+  if (!s) return;
+  activeSuggestion = s;
+  setCharacterState('con-sugerencia');
+  bubble?.webContents.send(IPC.suggestionShow, s);
+}
+
+async function handleSuggestionAccept(id: string): Promise<{ reply: string }> {
+  if (!activeSuggestion || activeSuggestion.id !== id) return { reply: '' };
+  const text = activeSuggestion.text;
+  activeSuggestion = null;
+  return handleChat(text);
+}
+
+function handleSuggestionDismiss(id: string): void {
+  if (!activeSuggestion || activeSuggestion.id !== id) return;
+  suggestions.dismiss(activeSuggestion.rule);
+  activeSuggestion = null;
+  setCharacterState(characterStateFor(observer.status()));
+}
+
 app.whenReady().then(() => {
   app.dock?.hide();
 
   config = loadConfig(join(app.getAppPath(), 'config.json'));
   db = openDb(join(app.getPath('userData'), 'agetik.db'));
+  backupDir = join(app.getPath('userData'), 'backups');
   observer = new Observer(db, config, readActiveWindow, pushStatus);
   ai = new AiClient(db, config);
+  suggestions = new SuggestionEngine(db, config);
 
   createWindows();
 
@@ -179,9 +221,16 @@ app.whenReady().then(() => {
     memoryApprove: (id) => approveMemory(db, id),
     memoryReject: (id) => rejectMemory(db, id),
     memoryDelete: (id) => deleteMemory(db, id),
+    suggestionAccept: handleSuggestionAccept,
+    suggestionDismiss: handleSuggestionDismiss,
+    fileEditList: () => listFileEdits(db),
+    fileEditApprove: (id) => approveFileEdit(db, id, backupDir),
+    fileEditReject: (id) => rejectFileEdit(db, id),
+    auditLog: () => getAuditLog(db),
   });
 
   setInterval(() => void observer.tick(), config.observer_poll_ms);
+  setInterval(evaluateSuggestions, SUGGESTION_POLL_MS);
   purgeExpired(db, config.retention_hours);
   setInterval(() => purgeExpired(db, config.retention_hours), RETENTION_EVERY_MS);
   startFileWatcher(config.allowed_folders, (p) => observer.recordFileChange(p));

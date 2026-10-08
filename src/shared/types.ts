@@ -45,6 +45,17 @@ export interface ChatMessage {
 export type MemoryTipo = 'preferencia' | 'proyecto' | 'decisión' | 'contexto';
 export type MemoryEstado = 'propuesto' | 'aprobado' | 'rechazado';
 
+export type FileEditStatus = 'propuesto' | 'aprobado' | 'rechazado' | 'aplicado' | 'fallido';
+
+export interface FileEdit {
+  id: number;
+  ts: number;
+  path: string;
+  status: FileEditStatus;
+  backup_path: string | null;
+  diff: string | null;
+}
+
 export interface Memory {
   id: number;
   contenido: string;

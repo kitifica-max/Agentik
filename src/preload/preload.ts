@@ -18,14 +18,24 @@ const IPC = {
   memoryReject: 'memory:reject',
   memoryDelete: 'memory:delete',
   memoryProposed: 'memory:proposed',
+  suggestionShow: 'suggestion:show',
+  suggestionAccept: 'suggestion:accept',
+  suggestionDismiss: 'suggestion:dismiss',
+  fileEditList: 'file-edit:list',
+  fileEditApprove: 'file-edit:approve',
+  fileEditReject: 'file-edit:reject',
+  fileEditProposed: 'file-edit:proposed',
+  auditLog: 'audit:log',
 } as const;
 
 const INVOKE: string[] = [
   IPC.observerStatus, IPC.observerSetEnabled, IPC.observerTogglePause,
   IPC.chatSend, IPC.memoryList, IPC.memoryApprove, IPC.memoryReject, IPC.memoryDelete,
+  IPC.suggestionAccept, IPC.suggestionDismiss,
+  IPC.fileEditList, IPC.fileEditApprove, IPC.fileEditReject, IPC.auditLog,
 ];
 const SEND: string[] = [IPC.bubbleToggle, IPC.windowMoveBy, IPC.windowDragEnd, IPC.appQuit];
-const LISTEN: string[] = [IPC.characterState, IPC.observerChanged, IPC.chatReply, IPC.chatThinking, IPC.memoryProposed];
+const LISTEN: string[] = [IPC.characterState, IPC.observerChanged, IPC.chatReply, IPC.chatThinking, IPC.memoryProposed, IPC.suggestionShow, IPC.fileEditProposed];
 
 contextBridge.exposeInMainWorld('agetik', {
   channels: IPC,

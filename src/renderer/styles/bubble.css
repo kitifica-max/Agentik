@@ -153,6 +153,37 @@ html, body {
 
 .memory-proposal p { margin: 0; flex: 1; }
 
+.suggestion-banner {
+  padding: 8px 10px;
+  background: rgba(30, 30, 30, 0.06);
+  border-radius: 10px;
+  border-left: 3px solid var(--warn);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  animation: slide-in 0.25s ease-out;
+}
+
+.suggestion-banner p { margin: 0; line-height: 1.4; }
+
+.suggestion-actions { display: flex; gap: 4px; justify-content: flex-end; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .suggestion-banner {
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+
+:root[data-theme="dark"] .suggestion-banner {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .chat-form {
   display: flex;
   gap: 6px;
@@ -248,6 +279,59 @@ html, body {
 .memory-propuesto { border-left: 3px solid var(--warn); }
 .memory-aprobado { border-left: 3px solid var(--ok); }
 .memory-rechazado { opacity: 0.5; border-left: 3px solid var(--danger); }
+
+.file-edit-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.file-edit-item {
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--assistant-bg);
+  font-size: 12px;
+}
+
+.file-edit-path {
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.file-edit-status {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-left: 4px;
+}
+
+.file-edit-status-propuesto { background: rgba(138, 90, 0, 0.12); color: var(--warn); }
+.file-edit-status-aplicado { background: rgba(45, 125, 70, 0.12); color: var(--ok); }
+.file-edit-status-rechazado { background: rgba(197, 48, 48, 0.12); color: var(--danger); }
+.file-edit-status-fallido { background: rgba(197, 48, 48, 0.12); color: var(--danger); }
+
+.diff-preview {
+  margin: 4px 0;
+  padding: 4px 6px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  max-height: 120px;
+  overflow-y: auto;
+  white-space: pre;
+}
+
+.diff-add { color: var(--ok); }
+.diff-del { color: var(--danger); }
+
+.file-edit-actions { display: flex; gap: 4px; margin-top: 4px; }
 
 .muted { color: var(--muted); font-size: 12px; }
 

@@ -7,6 +7,8 @@ const delta = z.object({ dx: z.number().finite(), dy: z.number().finite() });
 const chatMsg = z.string().min(1).max(4000);
 const memId = z.number().int().positive();
 
+const suggestionId = z.string().min(1).max(100);
+
 export interface IpcHandlers {
   getStatus: () => unknown;
   setEnabled: (on: boolean) => unknown;
@@ -20,6 +22,12 @@ export interface IpcHandlers {
   memoryApprove: (id: number) => unknown;
   memoryReject: (id: number) => unknown;
   memoryDelete: (id: number) => unknown;
+  suggestionAccept: (id: string) => Promise<unknown>;
+  suggestionDismiss: (id: string) => void;
+  fileEditList: () => unknown;
+  fileEditApprove: (id: number) => unknown;
+  fileEditReject: (id: number) => unknown;
+  auditLog: () => unknown;
 }
 
 export function registerIpc(h: IpcHandlers): void {
@@ -55,4 +63,27 @@ export function registerIpc(h: IpcHandlers): void {
     if (!parsed.success) return false;
     return h.memoryDelete(parsed.data);
   });
+
+  ipcMain.handle(IPC.suggestionAccept, (_e, raw: unknown) => {
+    const parsed = suggestionId.safeParse(raw);
+    if (!parsed.success) return { error: 'ID inválido' };
+    return h.suggestionAccept(parsed.data);
+  });
+  ipcMain.handle(IPC.suggestionDismiss, (_e, raw: unknown) => {
+    const parsed = suggestionId.safeParse(raw);
+    if (parsed.success) h.suggestionDismiss(parsed.data);
+  });
+
+  ipcMain.handle(IPC.fileEditList, () => h.fileEditList());
+  ipcMain.handle(IPC.fileEditApprove, (_e, raw: unknown) => {
+    const parsed = memId.safeParse(raw);
+    if (!parsed.success) return { error: 'ID inválido' };
+    return h.fileEditApprove(parsed.data);
+  });
+  ipcMain.handle(IPC.fileEditReject, (_e, raw: unknown) => {
+    const parsed = memId.safeParse(raw);
+    if (!parsed.success) return false;
+    return h.fileEditReject(parsed.data);
+  });
+  ipcMain.handle(IPC.auditLog, () => h.auditLog());
 }

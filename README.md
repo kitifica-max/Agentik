@@ -2,7 +2,7 @@
 
 Agente personal de escritorio para macOS. Un personaje flotante observa tu trabajo, recuerda lo que le pides y puede modificar archivos cuando lo autorizas.
 
-Estado: **Fase 2 (en revisión)**. Chat con Claude Haiku, resumen de eventos, memoria aprobada.
+Estado: **Fase 4 (en revisión)**. Herramientas de archivo con diff preview, aprobación, backups y audit log.
 
 ## Instalación
 
@@ -34,6 +34,42 @@ Si le pides que recuerde algo, propone un recuerdo. Solo se guarda si lo aprueba
 ## Memoria
 
 La pestaña **Memoria** en la burbuja muestra todos los recuerdos: propuestos, aprobados y rechazados. Puedes aprobar, rechazar o eliminar desde ahí. Un recuerdo eliminado desaparece sin dejar copias.
+
+## Sugerencias proactivas
+
+Agetik observa patrones de actividad y sugiere ayuda cuando detecta algo relevante. El personaje cambia a estado `con-sugerencia` (sonrisa + rebote + insignia `!`).
+
+**Niveles** (`suggestion_level` en `config.json`):
+
+| Nivel | Comportamiento | Cooldown |
+|-------|----------------|----------|
+| `silencio` | Sin sugerencias | — |
+| `discreto` | Solo foco prolongado y cambio rápido de apps | 15 min |
+| `activo` | Todas las reglas: foco, cambio rápido, ediciones repetidas, inactividad | 5 min |
+
+**Reglas locales** (sin llamada a la API):
+- **Foco prolongado**: >30 min en la misma app → sugiere descanso.
+- **Cambio rápido**: >5 apps en 5 min → sugiere concentrarse.
+- **Ediciones repetidas** (solo activo): mismo archivo cambiado 3+ veces → sugiere revisar.
+- **Inactividad** (solo activo): sin actividad 10-30 min tras periodo activo → ofrece resumen.
+
+Al aceptar una sugerencia, se abre como chat con la IA. Al descartar, se suprime esa regla temporalmente.
+
+## Herramientas de archivo
+
+Agetik puede proponer ediciones a archivos dentro de las carpetas autorizadas. Toda escritura requiere aprobación explícita.
+
+**Flujo**:
+1. El AI propone una edición (via chat) → aparece en pestaña **Archivos** con diff preview.
+2. Revisas el diff (líneas verdes = añadidas, rojas = eliminadas).
+3. **Aprobar**: crea backup del original en `~/Library/Application Support/Agetik/backups/`, luego escribe.
+4. **Rechazar**: no se toca el archivo.
+
+**Restricciones de seguridad**:
+- Solo archivos dentro de `allowed_folders` (config.json).
+- Nunca toca: `.env`, claves SSH, `.pem`, credenciales, archivos ocultos de configuración.
+- Nunca borra archivos.
+- Cada acción se registra en el audit log (tabla `audit_log` en la DB).
 
 ## Permisos de macOS
 

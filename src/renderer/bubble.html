@@ -15,6 +15,7 @@
         <button id="pause" class="btn btn-sm" type="button" hidden>Pausar</button>
         <button id="tab-chat" class="tab active" type="button">Chat</button>
         <button id="tab-memory" class="tab" type="button">Memoria</button>
+        <button id="tab-files" class="tab" type="button">Archivos</button>
       </div>
     </header>
 
@@ -32,6 +33,13 @@
         <button id="proposal-approve" class="btn btn-sm btn-ok" type="button">Guardar</button>
         <button id="proposal-reject" class="btn btn-sm" type="button">Descartar</button>
       </div>
+      <div id="suggestion-banner" class="suggestion-banner" hidden>
+        <p id="suggestion-text"></p>
+        <div class="suggestion-actions">
+          <button id="suggestion-accept" class="btn btn-sm btn-ok" type="button">Abrir chat</button>
+          <button id="suggestion-dismiss" class="btn btn-sm" type="button">Descartar</button>
+        </div>
+      </div>
       <form id="chat-form" class="chat-form">
         <input id="chat-input" type="text" placeholder="Escribe algo…" autocomplete="off" maxlength="4000" />
         <button type="submit" class="btn btn-send">↑</button>
@@ -41,6 +49,12 @@
     <section id="view-memory" class="view" hidden>
       <div id="memory-list" class="memory-list">
         <p class="muted">Sin recuerdos guardados.</p>
+      </div>
+    </section>
+
+    <section id="view-files" class="view" hidden>
+      <div id="file-edit-list" class="file-edit-list">
+        <p class="muted">Sin ediciones pendientes.</p>
       </div>
     </section>
 

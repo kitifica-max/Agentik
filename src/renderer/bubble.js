@@ -16,12 +16,21 @@
   var proposalReject = document.getElementById('proposal-reject');
   var viewChat = document.getElementById('view-chat');
   var viewMemory = document.getElementById('view-memory');
+  var viewFiles = document.getElementById('view-files');
   var tabChat = document.getElementById('tab-chat');
   var tabMemory = document.getElementById('tab-memory');
+  var tabFiles = document.getElementById('tab-files');
   var memoryList = document.getElementById('memory-list');
+  var fileEditList = document.getElementById('file-edit-list');
+
+  var suggestionBanner = document.getElementById('suggestion-banner');
+  var suggestionText = document.getElementById('suggestion-text');
+  var suggestionAccept = document.getElementById('suggestion-accept');
+  var suggestionDismiss = document.getElementById('suggestion-dismiss');
 
   var current = { enabled: false, paused: false };
   var pendingMemory = null;
+  var pendingSuggestion = null;
 
   function renderStatus(s) {
     current = s;
@@ -49,9 +58,12 @@
   function showTab(name) {
     viewChat.hidden = name !== 'chat';
     viewMemory.hidden = name !== 'memory';
+    viewFiles.hidden = name !== 'files';
     tabChat.classList.toggle('active', name === 'chat');
     tabMemory.classList.toggle('active', name === 'memory');
+    tabFiles.classList.toggle('active', name === 'files');
     if (name === 'memory') loadMemories();
+    if (name === 'files') loadFileEdits();
   }
 
   function loadMemories() {
@@ -102,9 +114,81 @@
     });
   }
 
+  function renderDiff(diffText) {
+    var container = document.createElement('div');
+    container.className = 'diff-preview';
+    if (!diffText) { container.textContent = '(sin diff)'; return container; }
+    var lines = diffText.split('\n');
+    lines.forEach(function (line) {
+      var span = document.createElement('span');
+      if (line.startsWith('+ ')) {
+        span.className = 'diff-add';
+      } else if (line.startsWith('- ')) {
+        span.className = 'diff-del';
+      }
+      span.textContent = line + '\n';
+      container.appendChild(span);
+    });
+    return container;
+  }
+
+  function loadFileEdits() {
+    api.invoke(ch.fileEditList).then(function (list) {
+      fileEditList.innerHTML = '';
+      if (!list || list.length === 0) {
+        fileEditList.innerHTML = '<p class="muted">Sin ediciones pendientes.</p>';
+        return;
+      }
+      list.forEach(function (edit) {
+        var item = document.createElement('div');
+        item.className = 'file-edit-item';
+
+        var header = document.createElement('div');
+        var pathSpan = document.createElement('span');
+        pathSpan.className = 'file-edit-path';
+        pathSpan.textContent = edit.path.split('/').slice(-2).join('/');
+        pathSpan.title = edit.path;
+        header.appendChild(pathSpan);
+
+        var statusSpan = document.createElement('span');
+        statusSpan.className = 'file-edit-status file-edit-status-' + edit.status;
+        statusSpan.textContent = edit.status;
+        header.appendChild(statusSpan);
+        item.appendChild(header);
+
+        if (edit.diff) {
+          item.appendChild(renderDiff(edit.diff));
+        }
+
+        if (edit.status === 'propuesto') {
+          var actions = document.createElement('div');
+          actions.className = 'file-edit-actions';
+          var approveBtn = document.createElement('button');
+          approveBtn.className = 'btn btn-sm btn-ok';
+          approveBtn.textContent = 'Aprobar';
+          approveBtn.onclick = function () {
+            api.invoke(ch.fileEditApprove, edit.id).then(function () { loadFileEdits(); });
+          };
+          var rejectBtn = document.createElement('button');
+          rejectBtn.className = 'btn btn-sm btn-danger';
+          rejectBtn.textContent = 'Rechazar';
+          rejectBtn.onclick = function () {
+            api.invoke(ch.fileEditReject, edit.id).then(function () { loadFileEdits(); });
+          };
+          actions.appendChild(approveBtn);
+          actions.appendChild(rejectBtn);
+          item.appendChild(actions);
+        }
+
+        fileEditList.appendChild(item);
+      });
+    });
+  }
+
   // Tabs
   tabChat.addEventListener('click', function () { showTab('chat'); });
   tabMemory.addEventListener('click', function () { showTab('memory'); });
+  tabFiles.addEventListener('click', function () { showTab('files'); });
 
   // Observer controls
   toggle.addEventListener('click', function () {
@@ -163,6 +247,44 @@
   api.on(ch.chatThinking, function (on) {
     thinking.hidden = !on;
     if (on) messages.scrollTop = messages.scrollHeight;
+  });
+
+  // File edit proposed from AI
+  api.on(ch.fileEditProposed, function (edit) {
+    showTab('files');
+    loadFileEdits();
+  });
+
+  // Suggestions
+  api.on(ch.suggestionShow, function (s) {
+    pendingSuggestion = s;
+    suggestionText.textContent = '💡 ' + s.text;
+    suggestionBanner.hidden = false;
+    showTab('chat');
+  });
+
+  suggestionAccept.addEventListener('click', function () {
+    if (!pendingSuggestion) return;
+    var id = pendingSuggestion.id;
+    var text = pendingSuggestion.text;
+    pendingSuggestion = null;
+    suggestionBanner.hidden = true;
+    addMessage('assistant', text);
+    chatInput.disabled = true;
+    api.invoke(ch.suggestionAccept, id).then(function (result) {
+      chatInput.disabled = false;
+      chatInput.focus();
+      if (result && result.reply) {
+        addMessage('assistant', result.reply);
+      }
+    });
+  });
+
+  suggestionDismiss.addEventListener('click', function () {
+    if (!pendingSuggestion) return;
+    api.invoke(ch.suggestionDismiss, pendingSuggestion.id);
+    pendingSuggestion = null;
+    suggestionBanner.hidden = true;
   });
 
   api.on(ch.observerChanged, renderStatus);
