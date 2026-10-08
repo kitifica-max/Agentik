@@ -157,7 +157,8 @@ En la pestaña **Modelo** eliges con qué modelo trabaja Agentik (el cambio apli
 | Tipo | Para qué | Notas |
 |---|---|---|
 | Anthropic | Claude | Tu API key, que pegas en la pestaña. |
-| Compatible con OpenAI | OpenAI, OpenRouter, Groq, LM Studio, vLLM... | URL base + modelo; la key y los precios son opcionales. |
+| Google Gemini, OpenAI, DeepSeek, Groq, OpenRouter, Mistral, xAI, Together | Presets | Rellenan la URL base. Solo pones el ID exacto del modelo (ej. `gemini-3.8-flash`) y tu key. |
+| Otra compatible con OpenAI | LM Studio, vLLM... | URL base + modelo; la key y los precios son opcionales. |
 | Ollama (local) | Modelos en tu Mac | URL `http://localhost:11434`; "Detectar" lista los instalados. Cuesta $0. |
 
 - Las API keys se guardan **cifradas con el Llavero de macOS**. No van a la base de datos, al `config.json`, a los logs ni a la interfaz.

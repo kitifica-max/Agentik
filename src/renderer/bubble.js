@@ -338,6 +338,24 @@
 
   // ── Modelos: elegir el activo, agregar APIs (Anthropic, compatibles con OpenAI) y modelos locales (Ollama)
   var DEFAULT_URL = { openai: 'https://api.openai.com/v1', ollama: 'http://localhost:11434' };
+  // Presets: todos usan el proveedor 'openai' (API compatible) con URL y modelo de ejemplo propios
+  var PRESETS = {
+    gemini: { url: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-3.8-flash' },
+    'openai-main': { url: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+    deepseek: { url: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+    groq: { url: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile' },
+    openrouter: { url: 'https://openrouter.ai/api/v1', model: 'anthropic/claude-sonnet-4.5' },
+    mistral: { url: 'https://api.mistral.ai/v1', model: 'mistral-large-latest' },
+    xai: { url: 'https://api.x.ai/v1', model: 'grok-4' },
+    together: { url: 'https://api.together.xyz/v1', model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo' },
+  };
+  function realProvider(v) { return PRESETS[v] ? 'openai' : v; }
+  function presetFor(profile) {
+    if (profile.provider !== 'openai') return profile.provider;
+    var u = (profile.base_url || DEFAULT_URL.openai).replace(/\/+$/, '');
+    for (var k in PRESETS) if (PRESETS[k].url === u) return k;
+    return 'openai';
+  }
   var PROVIDER_NAME = { anthropic: 'Anthropic', openai: 'API compatible con OpenAI', ollama: 'Ollama (local)' };
   var mf = {
     provider: document.getElementById('mf-provider'),
@@ -365,21 +383,24 @@
 
   // Muestra solo los campos que aplican al tipo elegido
   function applyProviderUI(keepUrl) {
-    var p = mf.provider.value;
+    var sel = mf.provider.value;
+    var p = realProvider(sel);
     mf.urlRow.hidden = p === 'anthropic';
     mf.keyRow.hidden = p === 'ollama';
     mf.ctxRow.hidden = p !== 'ollama';
     mf.prices.hidden = p === 'anthropic'; // en Ollama solo aplica a modelos -cloud; local = $0
     mf.detect.hidden = p !== 'ollama';
-    mf.model.placeholder = p === 'anthropic' ? 'claude-sonnet-5-5' : p === 'ollama' ? 'qwen3:8b' : 'gpt-4o-mini';
-    if (!keepUrl) mf.url.value = DEFAULT_URL[p] || '';
-    mf.url.placeholder = DEFAULT_URL[p] || '';
+    var pre = PRESETS[sel];
+    var url = pre ? pre.url : DEFAULT_URL[p] || '';
+    mf.model.placeholder = pre ? pre.model : p === 'anthropic' ? 'claude-sonnet-5-5' : p === 'ollama' ? 'qwen3:8b' : 'gpt-4o-mini';
+    if (!keepUrl) mf.url.value = url;
+    mf.url.placeholder = url;
   }
 
   function openModelForm(profile) {
     editing = profile || null;
     mfError('');
-    mf.provider.value = profile ? profile.provider : 'ollama';
+    mf.provider.value = profile ? presetFor(profile) : 'ollama';
     mf.provider.disabled = !!profile;
     applyProviderUI(!!profile);
     mf.label.value = profile ? profile.label : '';
@@ -487,7 +508,7 @@
 
   mForm.addEventListener('submit', function (e) {
     e.preventDefault();
-    var p = mf.provider.value;
+    var p = realProvider(mf.provider.value);
     var payload = { label: mf.label.value.trim(), provider: p, model: mf.model.value.trim() };
     if (editing) payload.id = editing.id;
     if (p !== 'anthropic' && mf.url.value.trim()) payload.base_url = mf.url.value.trim();
