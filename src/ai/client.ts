@@ -9,6 +9,7 @@ import { isSensitiveText } from '../memory/filters.js';
 import { isSensitivePath } from '../observer/filters.js';
 import { executeFileOp, organizeFolder, logAudit } from '../files/fileTools.js';
 import { runCommand, isBlockedCommand } from '../shell/shell.js';
+import { recordUsage } from './cost.js';
 import { homedir } from 'node:os';
 
 const MODEL = 'claude-sonnet-5-5';
@@ -349,6 +350,8 @@ export class AiClient {
         tools: TOOLS,
         messages: apiMessages,
       });
+
+      if (response.usage) recordUsage(this.db, MODEL, response.usage);
 
       const toolUses: Anthropic.ToolUseBlock[] = [];
       replyText = '';

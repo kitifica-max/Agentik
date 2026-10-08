@@ -33,6 +33,7 @@ export interface IpcHandlers {
   configGetFolders: () => string[];
   configAddFolder: () => Promise<string[]>;
   configRemoveFolder: (folder: string) => string[];
+  usageGet: () => unknown;
 }
 
 export function registerIpc(h: IpcHandlers): void {
@@ -94,6 +95,7 @@ export function registerIpc(h: IpcHandlers): void {
   ipcMain.handle(IPC.fileEditRejectAll, () => h.fileEditRejectAll());
   ipcMain.handle(IPC.auditLog, () => h.auditLog());
 
+  ipcMain.handle(IPC.usageGet, () => h.usageGet());
   ipcMain.handle(IPC.configGetFolders, () => h.configGetFolders());
   ipcMain.handle(IPC.configAddFolder, () => h.configAddFolder());
   ipcMain.handle(IPC.configRemoveFolder, (_e, raw: unknown) => {

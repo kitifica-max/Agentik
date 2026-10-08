@@ -51,6 +51,7 @@ export class SuggestionEngine {
     if (events.length < MIN_EVENTS) return null;
 
     const suggestion =
+      this.checkCustomRules(events, now) ??
       this.checkLongFocus(events, now) ??
       this.checkRapidSwitching(events, now) ??
       (level === 'activo' ? this.checkRepeatedEdits(events, now) : null) ??
@@ -72,6 +73,23 @@ export class SuggestionEngine {
 
   private makeId(): string {
     return `s_${++this.idCounter}_${Date.now()}`;
+  }
+
+  // Reglas del usuario (config.custom_rules): misma app (y título opcional) seguida X minutos.
+  private checkCustomRules(events: EventRow[], now: number): Suggestion | null {
+    const focus = events.filter(e => e.kind === 'app_focus' && e.app);
+    for (const [i, rule] of this.config.custom_rules.entries()) {
+      const app = rule.app.toLowerCase();
+      const title = rule.title_contains?.toLowerCase();
+      let ms = 0;
+      for (const e of focus) {
+        const ok = e.app!.toLowerCase().includes(app) && (!title || (e.title ?? '').toLowerCase().includes(title));
+        if (!ok) break;
+        ms += e.duration_ms ?? 0;
+      }
+      if (ms >= rule.minutes * 60_000) return { id: this.makeId(), text: rule.message, rule: `custom:${i}`, ts: now };
+    }
+    return null;
   }
 
   private checkLongFocus(events: EventRow[], now: number): Suggestion | null {

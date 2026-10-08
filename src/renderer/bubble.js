@@ -30,6 +30,16 @@
   var folderListEl = document.getElementById('folder-list');
   var addFolderBtn = document.getElementById('add-folder');
 
+  var costEl = document.getElementById('cost');
+  function usd(n) { return n > 0 && n < 0.01 ? '<$0.01' : '$' + n.toFixed(2); }
+  function loadCost() {
+    api.invoke(ch.usageGet).then(function (t) {
+      if (!t) return;
+      costEl.textContent = usd(t.today) + ' hoy';
+      costEl.title = 'Últimos 7 días: ' + usd(t.week) + ' · Este mes: ' + usd(t.month) + ' (estimado)';
+    });
+  }
+
   var current = { enabled: false, paused: false };
   var pendingMemory = null;
   var pendingSuggestion = null;
@@ -306,6 +316,7 @@
     api.invoke(ch.chatSend, text).then(function (result) {
       chatInput.disabled = false;
       chatInput.focus();
+      loadCost();
       if (result && result.reply) {
         addMessage('assistant', result.reply);
       } else if (result && result.error) {
@@ -343,6 +354,10 @@
     if (on) messages.scrollTop = messages.scrollHeight;
   });
 
+  // Mensajes locales (resumen) y chat nuevo desde atajos
+  api.on(ch.chatReply, function (text) { showTab('chat'); addMessage('assistant', text); });
+  api.on(ch.chatClear, function () { messages.innerHTML = ''; showTab('chat'); });
+
   // File edit proposed from AI
   api.on(ch.fileEditProposed, function (edit) {
     updateFilesBadge(pendingOpsCount + 1);
@@ -369,6 +384,7 @@
     api.invoke(ch.suggestionAccept, id).then(function (result) {
       chatInput.disabled = false;
       chatInput.focus();
+      loadCost();
       if (result && result.reply) {
         addMessage('assistant', result.reply);
       }
@@ -382,6 +398,7 @@
     suggestionBanner.hidden = true;
   });
 
+  loadCost();
   api.on(ch.observerChanged, renderStatus);
   api.invoke(ch.observerStatus).then(renderStatus);
 })();

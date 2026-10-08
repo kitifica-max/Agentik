@@ -43,6 +43,18 @@ CREATE TABLE IF NOT EXISTS audit_log (
   detail TEXT
 );
 
+CREATE TABLE IF NOT EXISTS usage (
+  id            INTEGER PRIMARY KEY,
+  ts            INTEGER NOT NULL,
+  model         TEXT NOT NULL,
+  input_tokens  INTEGER NOT NULL,
+  output_tokens INTEGER NOT NULL,
+  cache_read    INTEGER NOT NULL DEFAULT 0,
+  cache_write   INTEGER NOT NULL DEFAULT 0,
+  cost_usd      REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_usage_ts ON usage(ts);
+
 CREATE TABLE IF NOT EXISTS app_state (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL

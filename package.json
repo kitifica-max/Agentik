@@ -16,8 +16,16 @@
   "build": {
     "appId": "com.agetik.app",
     "productName": "Agetik",
+    "directories": {
+      "output": "release"
+    },
     "files": [
       "dist/**/*",
+      "!dist/*.dmg",
+      "!dist/*.blockmap",
+      "!dist/.temp*",
+      "!dist/mac*/**",
+      "!dist/builder-*",
       "config.json",
       "package.json"
     ],

@@ -13,6 +13,7 @@ const IPC = {
   chatSend: 'chat:send',
   chatReply: 'chat:reply',
   chatThinking: 'chat:thinking',
+  chatClear: 'chat:clear',
   memoryList: 'memory:list',
   memoryApprove: 'memory:approve',
   memoryReject: 'memory:reject',
@@ -31,6 +32,7 @@ const IPC = {
   configGetFolders: 'config:get-folders',
   configAddFolder: 'config:add-folder',
   configRemoveFolder: 'config:remove-folder',
+  usageGet: 'usage:get',
 } as const;
 
 const INVOKE: string[] = [
@@ -38,10 +40,10 @@ const INVOKE: string[] = [
   IPC.chatSend, IPC.memoryList, IPC.memoryApprove, IPC.memoryReject, IPC.memoryDelete,
   IPC.suggestionAccept, IPC.suggestionDismiss,
   IPC.fileEditList, IPC.fileEditApprove, IPC.fileEditApproveAll, IPC.fileEditReject, IPC.fileEditRejectAll, IPC.auditLog,
-  IPC.configGetFolders, IPC.configAddFolder, IPC.configRemoveFolder,
+  IPC.configGetFolders, IPC.configAddFolder, IPC.configRemoveFolder, IPC.usageGet,
 ];
 const SEND: string[] = [IPC.bubbleToggle, IPC.windowMoveBy, IPC.windowDragEnd, IPC.appQuit];
-const LISTEN: string[] = [IPC.characterState, IPC.observerChanged, IPC.chatReply, IPC.chatThinking, IPC.memoryProposed, IPC.suggestionShow, IPC.fileEditProposed];
+const LISTEN: string[] = [IPC.characterState, IPC.observerChanged, IPC.chatReply, IPC.chatThinking, IPC.chatClear, IPC.memoryProposed, IPC.suggestionShow, IPC.fileEditProposed];
 
 contextBridge.exposeInMainWorld('agetik', {
   channels: IPC,

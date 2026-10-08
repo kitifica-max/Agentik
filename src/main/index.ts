@@ -13,6 +13,12 @@ import { IPC } from '../shared/ipc-channels.js';
 import { AiClient } from '../ai/client.js';
 import { proposeMemory, approveMemory, rejectMemory, deleteMemory, listMemories } from '../memory/memory.js';
 import { SuggestionEngine, type Suggestion } from '../suggestions/engine.js';
+import { dailySummary } from '../summary/daily.js';
+import { usageTotals, costReport } from '../ai/cost.js';
+import { gitToday, resume } from '../git/git.js';
+import { scanDisk, formatReport, cleanLast } from '../disk/disk.js';
+import { homedir } from 'node:os';
+import { existsSync } from 'node:fs';
 import { approveFileEdit, approveAllFileEdits, rejectFileEdit, rejectAllFileEdits, listFileEdits, getAuditLog } from '../files/fileTools.js';
 import type { CharacterState, Config, MemoryTipo, ObserverStatus } from '../shared/types.js';
 
@@ -156,11 +162,46 @@ function toggleBubble(): void {
 
 const VALID_TIPOS: MemoryTipo[] = ['preferencia', 'proyecto', 'decisión', 'contexto'];
 
+const SUMMARY_RE = /^\s*¿?\s*(resumen(\s+del\s+d[ií]a)?|qu[eé]\s+avanc[eé](\s+hoy)?|mi\s+avance(\s+de\s+hoy)?)\s*[?.!]*\s*$/i;
+const RESUME_RE = /^\s*¿?\s*(retoma|retomar|d[oó]nde\s+me\s+qued[eé]|en\s+qu[eé]\s+(estaba|iba))\s*[?.!]*\s*$/i;
+
+async function localSummary(): Promise<string> {
+  const base = dailySummary(db, Math.min(24, config.retention_hours));
+  const git = await gitToday(workRoots()).catch(() => '');
+  return git ? `${base}\n\n${git}` : base;
+}
+
+const COST_RE = /^\s*¿?\s*(gasto|consumo|cu[aá]nto\s+(he\s+gastado|llevo(\s+gastado)?|llevamos|cuesta\s+el\s+agente))(\s+(hoy|de\s+hoy|del\s+mes))?\s*[?.!]*\s*$/i;
+const CLEAN_RE = /^\s*(limpia|limpiar|limpia todo)\s*[.!?]?\s*$/i;
+const DISK_RE = /(espacio|disco)/i;
+const DISK_VERB_RE = /(libera|liberar|liberes|revis|limpi|cu[aá]nto|falta|lleno|llen[oa]|ocupa|pesa)/i;
+
+function workRoots(): string[] {
+  const h = homedir();
+  return [...new Set([...config.allowed_folders, ...['Documents', 'Developer', 'Projects', 'Desktop'].map((d) => join(h, d))])]
+    .filter((p) => existsSync(p));
+}
+
+// Comandos que se resuelven en la Mac, sin modelo y sin tokens.
+async function localCommand(msg: string): Promise<string | null> {
+  if (SUMMARY_RE.test(msg)) return localSummary();
+  if (RESUME_RE.test(msg)) return resume(workRoots());
+  if (COST_RE.test(msg)) return costReport(usageTotals(db));
+  if (CLEAN_RE.test(msg)) return cleanLast(db);
+  if (/^\s*espacio\s*[.!?]?\s*$/i.test(msg) || (DISK_RE.test(msg) && DISK_VERB_RE.test(msg))) {
+    return formatReport(await scanDisk({ roots: workRoots() }));
+  }
+  return null;
+}
+
 async function handleChat(msg: string): Promise<{ reply: string }> {
   setCharacterState('pensando');
   bubble?.webContents.send(IPC.chatThinking, true);
 
   try {
+    const local = await localCommand(msg);
+    if (local !== null) return { reply: local };
+
     const result = await ai.chat(msg);
 
     if (result.proposedMemory) {
@@ -191,6 +232,28 @@ function showToastInBubble(text: string): void {
   bubble?.webContents.executeJavaScript(
     `(typeof showToast === 'function') && showToast(${JSON.stringify(text)})`,
   ).catch(() => {});
+}
+
+function showBubble(): void {
+  if (bubble && !bubble.isVisible()) toggleBubble();
+}
+
+function registerShortcuts(): void {
+  globalShortcut.unregisterAll();
+  const actions: Record<keyof Config['shortcuts'], () => void> = {
+    pause: () => observer.togglePause(),
+    toggle_bubble: toggleBubble,
+    summary: () => { showBubble(); void localSummary().then((t) => bubble?.webContents.send(IPC.chatReply, t)); },
+    new_chat: () => { ai.clearSession(); showBubble(); bubble?.webContents.send(IPC.chatClear); },
+  };
+  for (const [name, run] of Object.entries(actions)) {
+    const accel = config.shortcuts[name as keyof Config['shortcuts']];
+    try {
+      if (!globalShortcut.register(accel, run)) console.warn(`[agetik] atajo "${accel}" (${name}) ya está en uso`);
+    } catch {
+      console.warn(`[agetik] atajo inválido "${accel}" (${name})`);
+    }
+  }
 }
 
 function evaluateSuggestions(): void {
@@ -226,6 +289,9 @@ app.whenReady().then(() => {
   ai = new AiClient(db, config, backupDir);
   suggestions = new SuggestionEngine(db, config);
 
+  // ponytail: solo empaquetada; en dev registraría el binario de Electron como login item
+  if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: config.launch_at_login });
+
   createWindows();
 
   registerIpc({
@@ -260,6 +326,7 @@ app.whenReady().then(() => {
     configGetFolders: () => config.allowed_folders,
     configAddFolder: handleAddFolder,
     configRemoveFolder: handleRemoveFolder,
+    usageGet: () => usageTotals(db),
   });
 
   setInterval(() => void observer.tick(), config.observer_poll_ms);
@@ -268,9 +335,7 @@ app.whenReady().then(() => {
   setInterval(() => purgeExpired(db, config.retention_hours), RETENTION_EVERY_MS);
   fileWatcher = startFileWatcher(config.allowed_folders, (p) => observer.recordFileChange(p));
 
-  globalShortcut.register('CommandOrControl+Shift+P', () => {
-    observer.togglePause();
-  });
+  registerShortcuts();
 
   pushStatus(observer.status());
 });

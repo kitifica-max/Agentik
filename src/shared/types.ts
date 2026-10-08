@@ -17,6 +17,20 @@ export interface ActiveWindow {
   title: string;
 }
 
+export interface CustomRule {
+  app: string;
+  title_contains?: string;
+  minutes: number;
+  message: string;
+}
+
+export interface Shortcuts {
+  pause: string;
+  toggle_bubble: string;
+  summary: string;
+  new_chat: string;
+}
+
 export interface Config {
   allowed_folders: string[];
   excluded_apps: string[];
@@ -26,6 +40,9 @@ export interface Config {
   memory_enabled: boolean;
   memory_max_items_per_request: number;
   observer_poll_ms: number;
+  custom_rules: CustomRule[];
+  shortcuts: Shortcuts;
+  launch_at_login: boolean;
 }
 
 export interface NewEvent {

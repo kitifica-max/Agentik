@@ -123,4 +123,31 @@ describe('SuggestionEngine', () => {
     expect(s).not.toBeNull();
     expect(s!.rule).toBe('inactivity');
   });
+
+  it('regla propia: misma app X minutos dispara su mensaje', () => {
+    const db = memoryDb();
+    const now = Date.now();
+    const config = { ...cfgWith('discreto'), custom_rules: [{ app: 'figma', minutes: 120, message: 'Exporta assets.' }] };
+    seedFocus(db, 'Figma', 4, 40 * 60_000, now);
+    const s = new SuggestionEngine(db, config).evaluate(now);
+    expect(s?.text).toBe('Exporta assets.');
+    expect(s?.rule).toBe('custom:0');
+  });
+
+  it('regla propia: no dispara si no llega al tiempo o es otra app', () => {
+    const db = memoryDb();
+    const now = Date.now();
+    const config = { ...cfgWith('activo'), custom_rules: [{ app: 'Figma', minutes: 120, message: 'x' }] };
+    seedFocus(db, 'Figma', 4, 10 * 60_000, now);
+    expect(new SuggestionEngine(db, config).evaluate(now)?.rule).not.toBe('custom:0');
+  });
+
+  it('regla propia con title_contains', () => {
+    const db = memoryDb();
+    const now = Date.now();
+    const config = { ...cfgWith('discreto'), custom_rules: [{ app: 'Chrome', title_contains: 'youtube', minutes: 30, message: 'Mucho YouTube.' }] };
+    const stmt = db.prepare('INSERT INTO events (ts, kind, app, title, duration_ms) VALUES (?, ?, ?, ?, ?)');
+    for (let i = 0; i < 4; i++) stmt.run(now - (4 - i) * 5000, 'app_focus', 'Chrome', 'YouTube - video', 10 * 60_000);
+    expect(new SuggestionEngine(db, config).evaluate(now)?.text).toBe('Mucho YouTube.');
+  });
 });

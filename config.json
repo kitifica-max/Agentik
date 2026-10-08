@@ -23,5 +23,13 @@
   "suggestion_level": "discreto",
   "memory_enabled": true,
   "memory_max_items_per_request": 5,
-  "observer_poll_ms": 5000
+  "observer_poll_ms": 5000,
+  "launch_at_login": true,
+  "custom_rules": [],
+  "shortcuts": {
+    "pause": "CommandOrControl+Shift+P",
+    "toggle_bubble": "Control+Alt+A",
+    "summary": "Control+Alt+R",
+    "new_chat": "Control+Alt+N"
+  }
 }
