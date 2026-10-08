@@ -2,7 +2,7 @@
 
 Agente personal de escritorio para macOS. Un personaje flotante observa tu trabajo, recuerda lo que le pides y puede modificar archivos cuando lo autorizas.
 
-Estado: **Fase 1 (en revisión)**. Personaje, observador local, filtros, retención, pausa e indicador.
+Estado: **Fase 2 (en revisión)**. Chat con Claude Haiku, resumen de eventos, memoria aprobada.
 
 ## Instalación
 
@@ -17,13 +17,23 @@ Requisitos: macOS 13+, Node 22+.
 
 ## Configuración de la API key
 
-Fases 2+. Crea `.env` en la raíz (ya está en `.gitignore`):
+Crea `.env` en la raíz (ya está en `.gitignore`):
 
 ```
 ANTHROPIC_API_KEY=tu_clave
 ```
 
-Nunca se escribe en logs ni en la base de datos.
+Modelo: Claude Haiku 5.5. La clave nunca se escribe en logs ni en la base de datos.
+
+## Chat
+
+Haz clic en el personaje para abrir la burbuja. Escribe un mensaje y Agetik responde usando Claude Haiku con contexto de tu actividad reciente (apps, archivos modificados) y recuerdos aprobados.
+
+Si le pides que recuerde algo, propone un recuerdo. Solo se guarda si lo apruebas. Datos sensibles (contraseñas, bancarios, salud, API keys) nunca se proponen como recuerdo.
+
+## Memoria
+
+La pestaña **Memoria** en la burbuja muestra todos los recuerdos: propuestos, aprobados y rechazados. Puedes aprobar, rechazar o eliminar desde ahí. Un recuerdo eliminado desaparece sin dejar copias.
 
 ## Permisos de macOS
 
@@ -85,7 +95,7 @@ Respeta "reducir movimiento" de macOS.
 **Cómo borrarlo**
 - Desactiva el observador: deja de registrar de inmediato.
 - Borra el archivo `~/Library/Application Support/Agetik/agetik.db` para eliminar todo el historial.
-- Los recuerdos se borrarán desde el panel de memoria (Fase 2), sin copias ni resúmenes derivados.
+- Los recuerdos se borran desde el panel de memoria, sin copias ni resúmenes derivados.
 
 ## Estructura
 

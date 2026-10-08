@@ -1,17 +1,22 @@
 import { app, BrowserWindow, globalShortcut, screen } from 'electron';
 import { join } from 'node:path';
-import { openDb, getState, setState, type Db } from '../db/db';
-import { Observer } from '../observer/observer';
-import { readActiveWindow } from '../observer/activeWindow';
-import { purgeExpired } from '../observer/retention';
-import { startFileWatcher } from '../observer/fileWatcher';
-import { loadConfig } from './config';
-import { registerIpc } from './ipc';
-import { IPC } from '../shared/ipc-channels';
-import type { CharacterState, Config, ObserverStatus } from '../shared/types';
+import { config as loadEnv } from 'dotenv';
+import { openDb, getState, setState, type Db } from '../db/db.js';
+import { Observer } from '../observer/observer.js';
+import { readActiveWindow } from '../observer/activeWindow.js';
+import { purgeExpired } from '../observer/retention.js';
+import { startFileWatcher } from '../observer/fileWatcher.js';
+import { loadConfig } from './config.js';
+import { registerIpc } from './ipc.js';
+import { IPC } from '../shared/ipc-channels.js';
+import { AiClient } from '../ai/client.js';
+import { proposeMemory, approveMemory, rejectMemory, deleteMemory, listMemories } from '../memory/memory.js';
+import type { CharacterState, Config, MemoryTipo, ObserverStatus } from '../shared/types.js';
+
+loadEnv();
 
 const CHAR_SIZE = { width: 150, height: 160 };
-const BUBBLE_SIZE = { width: 300, height: 240 };
+const BUBBLE_SIZE = { width: 360, height: 480 };
 const RETENTION_EVERY_MS = 60 * 60 * 1000;
 
 let character: BrowserWindow | null = null;
@@ -19,15 +24,14 @@ let bubble: BrowserWindow | null = null;
 let db: Db;
 let observer: Observer;
 let config: Config;
+let ai: AiClient;
 
 function savedPosition(): { x: number; y: number } {
   const raw = getState(db, 'window_position');
   if (raw) {
     try {
       return JSON.parse(raw) as { x: number; y: number };
-    } catch {
-      // Valor corrupto: cae al default.
-    }
+    } catch { /* corrupto */ }
   }
   const { workArea } = screen.getPrimaryDisplay();
   return {
@@ -42,9 +46,13 @@ function characterStateFor(s: ObserverStatus): CharacterState {
   return 'observando';
 }
 
+function setCharacterState(state: CharacterState): void {
+  const observing = observer.status().enabled && !observer.status().paused;
+  character?.webContents.send(IPC.characterState, { state, observing });
+}
+
 function pushStatus(s: ObserverStatus): void {
-  const observing = s.enabled && !s.paused;
-  character?.webContents.send(IPC.characterState, { state: characterStateFor(s), observing });
+  setCharacterState(characterStateFor(s));
   bubble?.webContents.send(IPC.observerChanged, s);
 }
 
@@ -111,13 +119,42 @@ function toggleBubble(): void {
   bubble.focus();
 }
 
+const VALID_TIPOS: MemoryTipo[] = ['preferencia', 'proyecto', 'decisión', 'contexto'];
+
+async function handleChat(msg: string): Promise<{ reply: string }> {
+  setCharacterState('pensando');
+  bubble?.webContents.send(IPC.chatThinking, true);
+
+  try {
+    const result = await ai.chat(msg);
+
+    if (result.proposedMemory) {
+      const tipo = VALID_TIPOS.includes(result.proposedMemory.tipo as MemoryTipo)
+        ? result.proposedMemory.tipo as MemoryTipo
+        : 'contexto';
+      const mem = proposeMemory(db, result.proposedMemory.contenido, tipo, 'chat');
+      if (mem) {
+        bubble?.webContents.send(IPC.memoryProposed, mem);
+      }
+    }
+
+    return { reply: result.reply };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Error desconocido';
+    return { reply: `Error: ${message}` };
+  } finally {
+    setCharacterState(characterStateFor(observer.status()));
+    bubble?.webContents.send(IPC.chatThinking, false);
+  }
+}
+
 app.whenReady().then(() => {
-  // Sin icono en el Dock ni en Cmd+Tab.
   app.dock?.hide();
 
   config = loadConfig(join(app.getAppPath(), 'config.json'));
   db = openDb(join(app.getPath('userData'), 'agetik.db'));
   observer = new Observer(db, config, readActiveWindow, pushStatus);
+  ai = new AiClient(db, config);
 
   createWindows();
 
@@ -137,17 +174,18 @@ app.whenReady().then(() => {
       setState(db, 'window_position', JSON.stringify({ x, y }));
     },
     quit: () => app.quit(),
+    chatSend: handleChat,
+    memoryList: () => listMemories(db),
+    memoryApprove: (id) => approveMemory(db, id),
+    memoryReject: (id) => rejectMemory(db, id),
+    memoryDelete: (id) => deleteMemory(db, id),
   });
 
-  // Ticks del observador y purga de retención.
   setInterval(() => void observer.tick(), config.observer_poll_ms);
   purgeExpired(db, config.retention_hours);
   setInterval(() => purgeExpired(db, config.retention_hours), RETENTION_EVERY_MS);
-
-  // Archivos: solo si hay carpetas autorizadas (lista vacía por defecto).
   startFileWatcher(config.allowed_folders, (p) => observer.recordFileChange(p));
 
-  // Pausa global con Cmd+Shift+P.
   globalShortcut.register('CommandOrControl+Shift+P', () => {
     observer.togglePause();
   });
@@ -155,9 +193,7 @@ app.whenReady().then(() => {
   pushStatus(observer.status());
 });
 
-app.on('window-all-closed', () => {
-  // La app vive sin ventanas (solo personaje).
-});
+app.on('window-all-closed', () => {});
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();

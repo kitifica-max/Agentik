@@ -36,3 +36,22 @@ export interface NewEvent {
   path?: string | null;
   duration_ms?: number | null;
 }
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export type MemoryTipo = 'preferencia' | 'proyecto' | 'decisión' | 'contexto';
+export type MemoryEstado = 'propuesto' | 'aprobado' | 'rechazado';
+
+export interface Memory {
+  id: number;
+  contenido: string;
+  tipo: MemoryTipo;
+  fuente: string;
+  estado: MemoryEstado;
+  created_at: number;
+  last_used_at: number | null;
+  expires_at: number | null;
+}

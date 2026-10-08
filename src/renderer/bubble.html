@@ -3,31 +3,52 @@
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'" />
-  <title>Agetik</title>
+  <title>Agetik Chat</title>
   <link rel="stylesheet" href="styles/bubble.css" />
 </head>
 <body>
-  <main class="bubble">
-    <header>
-      <strong>Agetik</strong>
-      <span id="status" class="status">Reposo</span>
+  <div class="bubble">
+    <header class="header">
+      <span id="status" class="status-text">Reposo</span>
+      <div class="header-actions">
+        <button id="toggle" class="btn btn-sm" type="button">Activar</button>
+        <button id="pause" class="btn btn-sm" type="button" hidden>Pausar</button>
+        <button id="tab-chat" class="tab active" type="button">Chat</button>
+        <button id="tab-memory" class="tab" type="button">Memoria</button>
+      </div>
     </header>
 
-    <p id="hint" class="hint">Observador apagado. Actívalo para empezar a registrar tu actividad.</p>
-    <p id="perm" class="warn" hidden>
-      Falta permiso de Accesibilidad. Ajustes del Sistema → Privacidad y seguridad → Accesibilidad → activa Agetik. Sin él solo veo el nombre de la app.
-    </p>
-
-    <div class="row">
-      <button id="toggle" class="primary" type="button">Activar observador</button>
-      <button id="pause" type="button" hidden>Pausar</button>
+    <div id="perm" class="perm" hidden>
+      ⚠ Activa permisos de Accesibilidad para leer títulos de ventana.
     </div>
 
-    <footer>
-      <span>Cmd+Shift+P pausa</span>
-      <button id="quit" class="link" type="button">Salir</button>
+    <section id="view-chat" class="view">
+      <div id="messages" class="messages"></div>
+      <div id="thinking" class="thinking" hidden>
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      </div>
+      <div id="memory-proposal" class="memory-proposal" hidden>
+        <p id="proposal-text"></p>
+        <button id="proposal-approve" class="btn btn-sm btn-ok" type="button">Guardar</button>
+        <button id="proposal-reject" class="btn btn-sm" type="button">Descartar</button>
+      </div>
+      <form id="chat-form" class="chat-form">
+        <input id="chat-input" type="text" placeholder="Escribe algo…" autocomplete="off" maxlength="4000" />
+        <button type="submit" class="btn btn-send">↑</button>
+      </form>
+    </section>
+
+    <section id="view-memory" class="view" hidden>
+      <div id="memory-list" class="memory-list">
+        <p class="muted">Sin recuerdos guardados.</p>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span class="shortcut">⌘⇧P pausa</span>
+      <button id="quit" class="btn btn-sm btn-danger" type="button">Salir</button>
     </footer>
-  </main>
+  </div>
   <script src="bubble.js"></script>
 </body>
 </html>
