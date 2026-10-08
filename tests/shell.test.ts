@@ -8,7 +8,7 @@ describe('isBlockedCommand', () => {
   ])('bloquea: %s', (c) => expect(isBlockedCommand(c)).toBe(true));
 
   it.each([
-    'ls -la ~/Downloads', 'rm /tmp/agetik-temp.txt', 'rm -rf ./node_modules', 'mv a.txt ~/.Trash/',
+    'ls -la ~/Downloads', 'rm /tmp/agentik-temp.txt', 'rm -rf ./node_modules', 'mv a.txt ~/.Trash/',
     'du -sh ~/Downloads', 'python3 script.py', 'find . -name "*.png" | wc -l',
   ])('permite: %s', (c) => expect(isBlockedCommand(c)).toBe(false));
 });

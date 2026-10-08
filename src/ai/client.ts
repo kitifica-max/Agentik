@@ -16,7 +16,7 @@ const MODEL = 'claude-sonnet-5-5';
 const MAX_TOKENS = 8192;
 const MAX_TOOL_ROUNDS = 40;
 
-const SYSTEM_PROMPT = `Eres Agetik, agente de escritorio autónomo en el Mac del usuario. Haces tareas reales con tus herramientas, sin pedir permiso.
+const SYSTEM_PROMPT = `Eres Agentik, agente de escritorio autónomo en el Mac del usuario. Haces tareas reales con tus herramientas, sin pedir permiso.
 
 REGLAS:
 1. Directo: instrucción → ejecutas. Sin plática ni confirmar lo obvio. Español.
@@ -385,7 +385,7 @@ export class AiClient {
         }
         opsExecuted += result.ops ?? 0;
         // sin contenido de archivos en logs; solo herramienta y resultado corto
-        console.log(`[agetik] ${tu.name} -> ${result.success ? 'ok' : 'ERROR'}: ${result.message.split('\n')[0].slice(0, 160)}`);
+        console.log(`[agentik] ${tu.name} -> ${result.success ? 'ok' : 'ERROR'}: ${result.message.split('\n')[0].slice(0, 160)}`);
         toolResults.push({
           type: 'tool_result',
           tool_use_id: tu.id,

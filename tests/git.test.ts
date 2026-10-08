@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { findRepos, gitToday, resume, ago } from '../src/git/git.js';
 
-const EMAIL = 'test@agetik.dev';
+const EMAIL = 'test@agentik.dev';
 let base: string, work: string;
 const prevGlobal = process.env.GIT_CONFIG_GLOBAL;
 
@@ -28,7 +28,7 @@ function repo(name: string, subject: string, date?: string): string {
 }
 
 beforeAll(() => {
-  base = mkdtempSync(join(tmpdir(), 'agetik-git-'));
+  base = mkdtempSync(join(tmpdir(), 'agentik-git-'));
   work = join(base, 'work');
   writeFileSync(join(base, 'gitconfig'), `[user]\n\temail = ${EMAIL}\n`);
   process.env.GIT_CONFIG_GLOBAL = join(base, 'gitconfig');

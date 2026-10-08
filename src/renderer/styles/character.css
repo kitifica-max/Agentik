@@ -27,62 +27,37 @@ body {
 }
 
 .body {
-  position: relative;
+  display: block;
   width: 120px;
   height: 120px;
-  transform-origin: 50% 90%;
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  transition: opacity 0.4s ease;
 }
 
-.avatar {
-  display: block;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.face {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  pointer-events: none;
-}
-
-/* Parches: mismo color que el fondo del avatar. */
+/* El círculo es solo el contenedor: no se anima. */
+.circle,
 .patch {
   fill: var(--paper);
 }
 
+/* La expresión la dibuja y anima avatar-engine.js (cejas, párpados, pupilas, boca). */
 .brow,
-.mouth,
-.eye {
+.lid {
   fill: none;
   stroke: var(--ink);
   stroke-linecap: round;
-  stroke-width: 1.4;
-  transition: d 0.35s ease, transform 0.35s ease, opacity 0.35s ease;
 }
 
-.brow {
-  transition: transform 0.35s ease;
-}
+.brow { stroke-width: 1.4; }
+.lid { stroke-width: 1.5; }
 
-.eye {
-  fill: var(--ink);
-  stroke-width: 0.6;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: blink 5.5s infinite;
-}
-
-.eyes {
-  transition: transform 0.35s ease;
-}
+.pupil { fill: var(--ink); }
 
 .mouth {
-  transition: d 0.35s ease, transform 0.35s ease;
+  fill: var(--ink);
+  stroke: var(--ink);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .indicator,
@@ -143,270 +118,10 @@ body {
   color: #fff;
 }
 
-/* ========== REPOSO ========== */
-/* Respira despacio, parpadea, boca neutra. Calma total. */
-[data-state="reposo"] .body {
-  animation: breathe 3.6s ease-in-out infinite;
-}
-
-/* ========== OBSERVANDO ========== */
-/* Atento, curioso. Los ojos miran de lado a lado. Cejas suben sutilmente. Boca piensa. */
-[data-state="observando"] .body {
-  animation: breathe 4s ease-in-out infinite;
-}
-
-[data-state="observando"] .eyes {
-  animation: look 3.8s ease-in-out infinite;
-}
-
-[data-state="observando"] .eye {
-  animation: blink-fast 3.2s infinite;
-}
-
-[data-state="observando"] .brow-l {
-  animation: brow-curious-l 3.8s ease-in-out infinite;
-}
-
-[data-state="observando"] .brow-r {
-  animation: brow-curious-r 3.8s ease-in-out infinite;
-}
-
-[data-state="observando"] .mouth {
-  animation: mouth-hmm 4s ease-in-out infinite;
-}
-
-/* ========== PENSANDO ========== */
-/* Concentrado. Ojos miran arriba-izquierda. Ceja derecha sube. Boca ondulada. Pupilas se mueven pensativas. */
-[data-state="pensando"] .body {
-  animation: think-tilt 2.8s ease-in-out infinite;
-}
-
-[data-state="pensando"] .eyes {
-  animation: eyes-think 2.8s ease-in-out infinite;
-}
-
-[data-state="pensando"] .eye {
-  animation: none;
-}
-
-[data-state="pensando"] .brow-l {
-  transform: translateY(0);
-}
-
-[data-state="pensando"] .brow-r {
-  animation: brow-raise 2.8s ease-in-out infinite;
-}
-
-[data-state="pensando"] .mouth {
-  d: path("M82.2 87.4 Q83.6 85.6 85 87.4 T87.8 87.4");
-  animation: mouth-think 2.8s ease-in-out infinite;
-}
-
-/* ========== CON SUGERENCIA ========== */
-/* Contento, útil. Ojos felices (arcos), sonrisa grande, rebote suave. Cejas arriba y contentas. */
-[data-state="con-sugerencia"] .body {
-  animation: happy-bounce 1.2s ease-in-out infinite;
-}
-
-[data-state="con-sugerencia"] .eye-l {
-  d: path("M65.6 69.4 Q69.3 64.8 73 69.4");
-  fill: none;
-  stroke-width: 1.6;
-  animation: happy-eyes 1.2s ease-in-out infinite;
-}
-
-[data-state="con-sugerencia"] .eye-r {
-  d: path("M94.2 69.4 Q97.9 64.8 101.6 69.4");
-  fill: none;
-  stroke-width: 1.6;
-  animation: happy-eyes 1.2s ease-in-out infinite;
-}
-
-[data-state="con-sugerencia"] .brow {
-  animation: brow-happy 1.2s ease-in-out infinite;
-}
-
-[data-state="con-sugerencia"] .mouth {
-  d: path("M81.2 86 Q85.3 90.6 89.4 86");
-  animation: mouth-smile 1.2s ease-in-out infinite;
-}
-
-/* ========== ESPERANDO APROBACIÓN ========== */
-/* Pide atención. Ojos grandes abiertos, cejas arriba, boca "o", ojos y cejas pulsan. */
-[data-state="esperando-aprobacion"] .body {
-  animation: attention-sway 1.6s ease-in-out infinite;
-}
-
-[data-state="esperando-aprobacion"] .eye-l {
-  d: path("M65.6 68 Q69.3 62.8 73 68 Q69.3 73.2 65.6 68Z");
-  animation: eyes-widen 1.6s ease-in-out infinite;
-}
-
-[data-state="esperando-aprobacion"] .eye-r {
-  d: path("M94.2 68 Q97.9 62.8 101.6 68 Q97.9 73.2 94.2 68Z");
-  animation: eyes-widen 1.6s ease-in-out infinite;
-}
-
-[data-state="esperando-aprobacion"] .brow {
-  animation: brow-alert 1.6s ease-in-out infinite;
-}
-
-[data-state="esperando-aprobacion"] .mouth {
-  d: path("M84.2 87 a1.2 1.4 0 1 0 2.4 0 a1.2 1.4 0 1 0 -2.4 0");
-  animation: mouth-o 1.6s ease-in-out infinite;
-}
-
-/* ========== PAUSADO ========== */
-/* Dormido. Ojos cerrados, hundido, respira lento y profundo. Boca plana. Todo opaco. */
+/* Pausado: se atenúa (los ojos cerrados y la respiración lenta los pone el motor). */
 [data-state="pausado"] .body {
   opacity: 0.55;
-  animation: sleep-breathe 4.5s ease-in-out infinite;
 }
-
-[data-state="pausado"] .eye-l {
-  d: path("M65.9 68.6 Q69.3 71.6 72.7 68.6");
-  fill: none;
-  stroke-width: 1.5;
-  animation: none;
-}
-
-[data-state="pausado"] .eye-r {
-  d: path("M94.5 68.6 Q97.9 71.6 101.3 68.6");
-  fill: none;
-  stroke-width: 1.5;
-  animation: none;
-}
-
-[data-state="pausado"] .brow {
-  opacity: 0.3;
-  transform: translateY(2px);
-}
-
-[data-state="pausado"] .mouth {
-  d: path("M82.8 87.8 H87.8");
-  animation: mouth-sleep 4.5s ease-in-out infinite;
-}
-
-/* ========== KEYFRAMES: BODY ========== */
-
-@keyframes breathe {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.025); }
-}
-
-@keyframes think-tilt {
-  0%, 100% { transform: rotate(-6deg) scale(1); }
-  50% { transform: rotate(-3deg) scale(1.01); }
-}
-
-@keyframes happy-bounce {
-  0%, 100% { transform: translateY(0) scale(1); }
-  30% { transform: translateY(-4px) scale(1.03); }
-  60% { transform: translateY(-1px) scale(1.01); }
-}
-
-@keyframes attention-sway {
-  0%, 100% { transform: rotate(0deg) translateY(0); }
-  25% { transform: rotate(-3deg) translateY(-2px); }
-  75% { transform: rotate(3deg) translateY(-2px); }
-}
-
-@keyframes sleep-breathe {
-  0%, 100% { transform: translateY(4px) scale(1); }
-  50% { transform: translateY(2px) scale(1.015); }
-}
-
-/* ========== KEYFRAMES: OJOS ========== */
-
-@keyframes blink {
-  0%, 94%, 100% { transform: scaleY(1); }
-  97% { transform: scaleY(0.1); }
-}
-
-@keyframes blink-fast {
-  0%, 88%, 100% { transform: scaleY(1); }
-  91% { transform: scaleY(0.1); }
-}
-
-@keyframes look {
-  0%, 100% { transform: translateX(-1.8px); }
-  50% { transform: translateX(1.8px); }
-}
-
-@keyframes eyes-think {
-  0%, 100% { transform: translate(-1.2px, -1.5px); }
-  40% { transform: translate(0.5px, -2px); }
-  70% { transform: translate(-0.8px, -1px); }
-}
-
-@keyframes eyes-widen {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.12); }
-}
-
-@keyframes happy-eyes {
-  0%, 100% { transform: scaleY(1); }
-  50% { transform: scaleY(1.1) translateY(-0.3px); }
-}
-
-/* ========== KEYFRAMES: CEJAS ========== */
-
-@keyframes brow-curious-l {
-  0%, 100% { transform: translateY(0) rotate(0); }
-  30% { transform: translateY(-1px) rotate(-2deg); }
-  70% { transform: translateY(0.5px) rotate(1deg); }
-}
-
-@keyframes brow-curious-r {
-  0%, 100% { transform: translateY(0) rotate(0); }
-  30% { transform: translateY(0.5px) rotate(1deg); }
-  70% { transform: translateY(-1px) rotate(-2deg); }
-}
-
-@keyframes brow-raise {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-2.5px); }
-}
-
-@keyframes brow-happy {
-  0%, 100% { transform: translateY(-0.5px); }
-  50% { transform: translateY(-1.5px); }
-}
-
-@keyframes brow-alert {
-  0%, 100% { transform: translateY(-1.5px); }
-  50% { transform: translateY(-3px); }
-}
-
-/* ========== KEYFRAMES: BOCA ========== */
-
-@keyframes mouth-hmm {
-  0%, 100% { transform: scaleX(1); }
-  40% { transform: scaleX(0.9) translateX(-0.3px); }
-  70% { transform: scaleX(1.1) translateX(0.3px); }
-}
-
-@keyframes mouth-think {
-  0%, 100% { transform: translateX(0); }
-  50% { transform: translateX(0.6px) translateY(-0.3px); }
-}
-
-@keyframes mouth-smile {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.08) translateY(0.3px); }
-}
-
-@keyframes mouth-o {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.15); }
-}
-
-@keyframes mouth-sleep {
-  0%, 100% { transform: scaleX(1); }
-  50% { transform: scaleX(0.85); }
-}
-
-/* ========== OTROS ========== */
 
 @keyframes pulse {
   0%, 100% { transform: scale(1); opacity: 1; }
@@ -414,11 +129,5 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
+  .indicator { animation: none !important; }
 }

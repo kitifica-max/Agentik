@@ -64,7 +64,7 @@ describe('Observer', () => {
   it('no guarda la propia app', async () => {
     const obs = new Observer(db, cfg, reader);
     obs.setEnabled(true);
-    current = { app: 'Electron', title: 'Agetik' };
+    current = { app: 'Electron', title: 'Agentik' };
     await obs.tick(0);
     await obs.tick(5000);
     expect(countEvents(db)).toBe(0);

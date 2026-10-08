@@ -1,5 +1,5 @@
 (function () {
-  var api = window.agetik;
+  var api = window.agentik;
   var ch = api.channels;
 
   var status = document.getElementById('status');

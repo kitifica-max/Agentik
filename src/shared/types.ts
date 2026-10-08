@@ -4,7 +4,9 @@ export type CharacterState =
   | 'pensando'
   | 'con-sugerencia'
   | 'esperando-aprobacion'
-  | 'pausado';
+  | 'pausado'
+  | 'exito'
+  | 'confuso';
 
 export interface ObserverStatus {
   enabled: boolean;

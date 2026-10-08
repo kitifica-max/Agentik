@@ -45,7 +45,7 @@ const INVOKE: string[] = [
 const SEND: string[] = [IPC.bubbleToggle, IPC.windowMoveBy, IPC.windowDragEnd, IPC.appQuit];
 const LISTEN: string[] = [IPC.characterState, IPC.observerChanged, IPC.chatReply, IPC.chatThinking, IPC.chatClear, IPC.memoryProposed, IPC.suggestionShow, IPC.fileEditProposed];
 
-contextBridge.exposeInMainWorld('agetik', {
+contextBridge.exposeInMainWorld('agentik', {
   channels: IPC,
   invoke: (channel: string, payload?: unknown) => {
     if (!INVOKE.includes(channel)) throw new Error(`IPC canal no permitido: ${channel}`);

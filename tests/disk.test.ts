@@ -16,7 +16,7 @@ function file(p: string, mb: number, mtime?: Date): void {
 }
 
 beforeAll(() => {
-  base = mkdtempSync(join(tmpdir(), 'agetik-disk-'));
+  base = mkdtempSync(join(tmpdir(), 'agentik-disk-'));
   home = join(base, 'home');
   code = join(home, 'code');
   outside = join(base, 'afuera');

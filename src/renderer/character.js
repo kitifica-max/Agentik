@@ -1,8 +1,21 @@
 // Personaje: estado visual, arrastre y clic. Sin imports: el renderer corre como script clásico.
 (function () {
-  var api = window.agetik;
+  var api = window.agentik;
   var agent = document.getElementById('agent');
   var badge = agent.querySelector('.badge');
+
+  // Motor de animación del personaje (avatar-engine.js). Estados de la app → estados del avatar.
+  var avatar = window.AgentikAvatar.mount(agent.querySelector('.body'));
+  var AVATAR_STATE = {
+    reposo: 'idle',
+    observando: 'idle',
+    pensando: 'thinking',
+    'con-sugerencia': 'success',
+    'esperando-aprobacion': 'listening',
+    pausado: 'sleeping',
+    exito: 'success',
+    confuso: 'confusion',
+  };
 
   var BADGES = {
     pensando: '…',
@@ -18,6 +31,7 @@
     badge.textContent = text;
     badge.dataset.kind = payload.state;
     badge.classList.toggle('show', !!text);
+    avatar.setAvatarState(AVATAR_STATE[payload.state] || 'idle');
   }
 
   api.on(api.channels.characterState, render);
@@ -47,7 +61,10 @@
   agent.addEventListener('pointerup', function () {
     if (!last) return;
     if (dragging) api.send(api.channels.windowDragEnd);
-    else api.send(api.channels.bubbleToggle);
+    else {
+      api.send(api.channels.bubbleToggle);
+      avatar.triggerGesture('smile_pop');
+    }
     last = null;
   });
 })();

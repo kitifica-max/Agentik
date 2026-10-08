@@ -1,4 +1,4 @@
-# Agetik
+# Agentik
 
 Agente personal de escritorio para macOS. Un personaje flotante observa tu trabajo, recuerda lo que le pides y puede modificar archivos cuando lo autorizas.
 
@@ -27,7 +27,7 @@ Modelo: Claude Haiku 5.5. La clave nunca se escribe en logs ni en la base de dat
 
 ## Chat
 
-Haz clic en el personaje para abrir la burbuja. Escribe un mensaje y Agetik responde usando Claude Haiku con contexto de tu actividad reciente (apps, archivos modificados) y recuerdos aprobados.
+Haz clic en el personaje para abrir la burbuja. Escribe un mensaje y Agentik responde usando Claude Haiku con contexto de tu actividad reciente (apps, archivos modificados) y recuerdos aprobados.
 
 Si le pides que recuerde algo, propone un recuerdo. Solo se guarda si lo apruebas. Datos sensibles (contraseñas, bancarios, salud, API keys) nunca se proponen como recuerdo.
 
@@ -37,7 +37,7 @@ La pestaña **Memoria** en la burbuja muestra todos los recuerdos: propuestos, a
 
 ## Sugerencias proactivas
 
-Agetik observa patrones de actividad y sugiere ayuda cuando detecta algo relevante. El personaje cambia a estado `con-sugerencia` (sonrisa + rebote + insignia `!`).
+Agentik observa patrones de actividad y sugiere ayuda cuando detecta algo relevante. El personaje cambia a estado `con-sugerencia` (sonrisa + rebote + insignia `!`).
 
 **Niveles** (`suggestion_level` en `config.json`):
 
@@ -57,12 +57,12 @@ Al aceptar una sugerencia, se abre como chat con la IA. Al descartar, se suprime
 
 ## Herramientas de archivo
 
-Agetik puede proponer ediciones a archivos dentro de las carpetas autorizadas. Toda escritura requiere aprobación explícita.
+Agentik puede proponer ediciones a archivos dentro de las carpetas autorizadas. Toda escritura requiere aprobación explícita.
 
 **Flujo**:
 1. El AI propone una edición (via chat) → aparece en pestaña **Archivos** con diff preview.
 2. Revisas el diff (líneas verdes = añadidas, rojas = eliminadas).
-3. **Aprobar**: crea backup del original en `~/Library/Application Support/Agetik/backups/`, luego escribe.
+3. **Aprobar**: crea backup del original en `~/Library/Application Support/agetik/backups/`, luego escribe.
 4. **Rechazar**: no se toca el archivo.
 
 **Restricciones de seguridad**:
@@ -73,10 +73,10 @@ Agetik puede proponer ediciones a archivos dentro de las carpetas autorizadas. T
 
 ## Permisos de macOS
 
-- **Accesibilidad**: necesario para leer el título de la ventana activa. Sin él, Agetik solo ve el nombre de la app. Ajustes del Sistema → Privacidad y seguridad → Accesibilidad → activa Agetik.
+- **Accesibilidad**: necesario para leer el título de la ventana activa. Sin él, Agentik solo ve el nombre de la app. Ajustes del Sistema → Privacidad y seguridad → Accesibilidad → activa Agentik.
 - **Automatización (System Events)**: macOS puede pedirlo al primer uso.
 - **Grabación de pantalla**: solo para capturas bajo petición (Fase 2).
-- **Acceso a carpetas**: Agetik solo vigila las carpetas que tú agregues desde la app.
+- **Acceso a carpetas**: Agentik solo vigila las carpetas que tú agregues desde la app.
 
 La app detecta permisos faltantes y lo indica en la burbuja.
 
@@ -90,16 +90,19 @@ Mientras el observador esté activo, el personaje muestra un punto rojo pulsante
 
 ## Animaciones del personaje
 
-El avatar (`assets/Agetik.svg`) se anima según lo que hace. Los ojos, cejas y boca se dibujan encima del SVG, que no se modifica.
+El círculo es solo el contenedor y no se mueve. El personaje se anima por capas (`assets/Agentik-torso.svg` y `assets/Agentik-head.svg`, generadas con `node scripts/split-avatar.mjs`) con el motor `src/renderer/avatar-engine.js`: máquina de estados, respiración, parpadeo aleatorio cada 3 a 5 s, movimientos oculares (saccades), gestos y sincronía con audio. Siempre sonríe.
 
-| Estado | Emoción | Expresión | Movimiento |
-|---|---|---|---|
-| reposo | calma | ojos normales, boca neutra | respira lento, parpadea |
-| observando | atento, curioso | ojos normales | se balancea, mira de lado a lado, punto rojo |
-| pensando | concentrado | ojos arriba, una ceja alzada, boca ondulada | cabeza ladeada, insignia `…` |
-| con-sugerencia | contento, útil | ojos felices, sonrisa | rebote suave, insignia `!` |
-| esperando-aprobacion | pide atención | ojos abiertos, cejas arriba, boca en "o" | se mueve en vaivén, insignia `?` |
-| pausado | apagado, descansando | ojos cerrados, boca plana | opaco, hundido, insignia `zz` |
+| Estado de la app | Estado del avatar | Qué hace |
+|---|---|---|
+| reposo, observando | `idle` | sonrisa suave, respira, gestos al azar (ladea la cabeza, asiente, sube cejas, guiña) |
+| esperando-aprobacion | `listening` | atento, cejas arriba, asiente seguido |
+| pensando | `thinking` | mira arriba a la izquierda, ceja alzada, cabeza ladeada |
+| con-sugerencia, exito | `success` | ojos felices, sonrisa abierta, rebote |
+| confuso (al fallar) | `confusion` | ceja asimétrica, sonrisa ladeada, mirada inquieta |
+| pausado | `sleeping` | ojos cerrados, respira lento, atenuado |
+| (por API) | `speaking`, `empathy` | habla con la boca, parpadea más; cejas internas arriba |
+
+API: `setAvatarState(state)`, `triggerGesture(name)` (`nod`, `tilt`, `frown`, `baton`, `wink`, `shrug`, `smile_pop`, `look_around`, `bounce`, `surprise`...) y `startAudioSync(audio)`. Hay una demo en `tools/avatar-demo.html` (`python3 -m http.server 8765` y abrir `/tools/avatar-demo.html`).
 
 Respeta "reducir movimiento" de macOS.
 
@@ -122,7 +125,7 @@ Respeta "reducir movimiento" de macOS.
 - Títulos que contengan: banco, bancaria, contraseña, password, login, bitwarden, 1password, keychain, salud, médico, wallet.
 
 **Dónde se guarda**
-- Base de datos SQLite local: `~/Library/Application Support/Agetik/agetik.db`.
+- Base de datos SQLite local: `~/Library/Application Support/agetik/agetik.db`.
 - Nada sale del equipo, salvo las llamadas al modelo en fases 2+, que envían solo resúmenes compactos.
 
 **Cuánto dura**
@@ -130,7 +133,7 @@ Respeta "reducir movimiento" de macOS.
 
 **Cómo borrarlo**
 - Desactiva el observador: deja de registrar de inmediato.
-- Borra el archivo `~/Library/Application Support/Agetik/agetik.db` para eliminar todo el historial.
+- Borra el archivo `~/Library/Application Support/agetik/agetik.db` para eliminar todo el historial.
 - Los recuerdos se borran desde el panel de memoria, sin copias ni resúmenes derivados.
 
 ## Estructura

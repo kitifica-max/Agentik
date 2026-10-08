@@ -4,7 +4,7 @@ import type { ActiveWindow, Config, ObserverStatus } from '../shared/types';
 import { isExcludedWindow } from './filters';
 import { recordEvent } from './recorder';
 
-const SELF_APPS = ['Electron', 'Agetik'];
+const SELF_APPS = ['Electron', 'Agentik', 'Agetik'];
 const MAX_TITLE = 200;
 
 export type WindowReader = () => Promise<{ window: ActiveWindow | null; permissionsOk: boolean }>;

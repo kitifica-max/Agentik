@@ -3,35 +3,48 @@
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; img-src 'self' data:" />
-  <title>Agetik</title>
+  <title>Agentik</title>
   <link rel="stylesheet" href="styles/character.css" />
 </head>
 <body>
-  <div id="agent" class="agent" data-state="reposo" role="button" aria-label="Agetik">
-    <div class="body">
-      <img class="avatar" src="assets/Agetik.svg" alt="" draggable="false" />
-      <!-- Parches del color de fondo sobre ojos, cejas y boca originales. Luego se dibuja la expresión. -->
-      <svg class="face" viewBox="0 0 163 163" aria-hidden="true">
-        <rect class="patch" x="61" y="55.5" width="17" height="7.5" />
-        <rect class="patch" x="89.5" y="55.5" width="18" height="7.5" />
-        <rect class="patch" x="62" y="63.5" width="14" height="9.5" />
-        <rect class="patch" x="91" y="63.5" width="14" height="9.5" />
-        <rect class="patch" x="79.5" y="83.5" width="13" height="9" />
-
-        <path class="brow brow-l" d="M63 57.8 Q68.5 55.4 74 57.6" />
-        <path class="brow brow-r" d="M90.8 57.6 Q96.3 55.4 102.2 57.8" />
-
-        <g class="eyes">
-          <path class="eye eye-l" d="M65.9 68 Q69.3 64.6 72.7 68 Q69.3 71.4 65.9 68Z" />
-          <path class="eye eye-r" d="M94.5 68 Q97.9 64.6 101.3 68 Q97.9 71.4 94.5 68Z" />
+  <div id="agent" class="agent" data-state="reposo" role="button" aria-label="Agentik">
+    <!-- El círculo es solo el contenedor (fijo). El personaje se anima por capas dentro del recorte. -->
+    <svg class="body" viewBox="0 0 163 163" aria-hidden="true">
+      <defs>
+        <clipPath id="av-clip"><circle cx="81.5" cy="81.5" r="81.5" /></clipPath>
+        <!-- Recorte del torso con un hueco en la mandíbula (se mueve con la cabeza): oculta el cuello dentro de la cara. -->
+        <clipPath id="av-neck"><path data-av="neckClip" clip-rule="evenodd" d="M-60 -60H223V223H-60Z M64 80H100V100.5H64Z" /></clipPath>
+      </defs>
+      <circle class="circle" cx="81.5" cy="81.5" r="81.5" />
+      <g clip-path="url(#av-clip)">
+        <g clip-path="url(#av-neck)">
+          <g data-av="torso"><image href="assets/Agentik-torso.svg" width="163" height="163" /></g>
         </g>
+        <g data-av="head">
+          <image href="assets/Agentik-head.svg" width="163" height="163" />
+          <g class="face">
+            <!-- Parches del color del círculo sobre ojos, cejas y boca originales. Luego se dibuja la expresión. -->
+            <rect class="patch" x="61" y="55.5" width="18.8" height="7.5" />
+            <rect class="patch" x="89.5" y="55.5" width="18" height="7.5" />
+            <rect class="patch" x="61.5" y="63.5" width="16" height="9.5" />
+            <rect class="patch" x="91" y="63.5" width="14" height="9.5" />
+            <rect class="patch" x="79.5" y="83.5" width="13" height="9" />
 
-        <path class="mouth" d="M82.6 87.2 H88" />
-      </svg>
-    </div>
+            <path class="brow" data-av="browL" d="M63 57.8 Q68.5 55.4 74 57.6" />
+            <path class="brow" data-av="browR" d="M90.8 57.6 Q96.3 55.4 102.2 57.8" />
+            <path class="lid" data-av="lidL" d="M64.9 68.4 Q69.9 64.4 74.9 68.4" />
+            <path class="lid" data-av="lidR" d="M92.4 68.6 Q97.4 64.6 102.4 68.6" />
+            <ellipse class="pupil" data-av="pupilL" cx="69.9" cy="69" rx="1.9" ry="2" />
+            <ellipse class="pupil" data-av="pupilR" cx="97.4" cy="69.2" rx="1.9" ry="2" />
+            <path class="mouth" data-av="mouth" d="M82 86.3 Q85.2 89 88.4 86.3" />
+          </g>
+        </g>
+      </g>
+    </svg>
     <span class="indicator" aria-hidden="true"></span>
     <span class="badge" aria-hidden="true"></span>
   </div>
+  <script src="avatar-engine.js"></script>
   <script src="character.js"></script>
 </body>
 </html>

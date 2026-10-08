@@ -22,9 +22,13 @@ import { existsSync } from 'node:fs';
 import { approveFileEdit, approveAllFileEdits, rejectFileEdit, rejectAllFileEdits, listFileEdits, getAuditLog } from '../files/fileTools.js';
 import type { CharacterState, Config, MemoryTipo, ObserverStatus } from '../shared/types.js';
 
-// ponytail: busca .env en proyecto (dev) y ~/.agetik.env (producción)
+// ponytail: busca .env en proyecto (dev), ~/.agentik.env y el anterior ~/.agetik.env (producción)
 loadEnv();
+loadEnv({ path: join(app.getPath('home'), '.agentik.env') });
 loadEnv({ path: join(app.getPath('home'), '.agetik.env') });
+
+// Los datos viven en la carpeta histórica "agetik": cambiarla perdería DB, config y recuerdos.
+app.setPath('userData', join(app.getPath('appData'), 'agetik'));
 
 const CHAR_SIZE = { width: 150, height: 160 };
 const BUBBLE_SIZE = { width: 360, height: 480 };
@@ -195,6 +199,7 @@ async function localCommand(msg: string): Promise<string | null> {
 }
 
 async function handleChat(msg: string): Promise<{ reply: string }> {
+  let flash: CharacterState | null = null; // reacción breve del personaje al terminar
   setCharacterState('pensando');
   bubble?.webContents.send(IPC.chatThinking, true);
 
@@ -214,16 +219,20 @@ async function handleChat(msg: string): Promise<{ reply: string }> {
       }
     }
 
+    if (result.opsExecuted > 0) flash = 'exito';
+
     if (result.opsExecuted > 0) {
       showToastInBubble(`${result.opsExecuted} operaciones ejecutadas`);
     }
 
     return { reply: result.reply };
   } catch (err: unknown) {
+    flash = 'confuso';
     const message = err instanceof Error ? err.message : 'Error desconocido';
     return { reply: `Error: ${message}` };
   } finally {
-    setCharacterState(characterStateFor(observer.status()));
+    setCharacterState(flash ?? characterStateFor(observer.status()));
+    if (flash) setTimeout(() => setCharacterState(characterStateFor(observer.status())), 3000);
     bubble?.webContents.send(IPC.chatThinking, false);
   }
 }
@@ -249,9 +258,9 @@ function registerShortcuts(): void {
   for (const [name, run] of Object.entries(actions)) {
     const accel = config.shortcuts[name as keyof Config['shortcuts']];
     try {
-      if (!globalShortcut.register(accel, run)) console.warn(`[agetik] atajo "${accel}" (${name}) ya está en uso`);
+      if (!globalShortcut.register(accel, run)) console.warn(`[agentik] atajo "${accel}" (${name}) ya está en uso`);
     } catch {
-      console.warn(`[agetik] atajo inválido "${accel}" (${name})`);
+      console.warn(`[agentik] atajo inválido "${accel}" (${name})`);
     }
   }
 }

@@ -6,7 +6,7 @@ import { memoryDb } from './helpers.js';
 import { proposeFileEdit, proposeFileMove, proposeFileMkdir, proposeFileCopy, approveFileEdit, approveAllFileEdits, executeFileOp, organizeFolder, rejectFileEdit, rejectAllFileEdits, listFileEdits, logAudit, getAuditLog } from '../src/files/fileTools.js';
 import type { Config } from '../src/shared/types.js';
 
-const testDir = join(tmpdir(), 'agetik-test-' + Date.now());
+const testDir = join(tmpdir(), 'agentik-test-' + Date.now());
 const backupDir = join(testDir, 'backups');
 const allowedDir = join(testDir, 'allowed');
 
@@ -355,7 +355,7 @@ describe('executeFileOp', () => {
 
   it('rechaza fuera de carpetas autorizadas', () => {
     const db = memoryDb();
-    expect(executeFileOp(db, testConfig(), backupDir, 'mkdir', '/tmp/fuera-agetik').success).toBe(false);
+    expect(executeFileOp(db, testConfig(), backupDir, 'mkdir', '/tmp/fuera-agentik').success).toBe(false);
   });
 });
 

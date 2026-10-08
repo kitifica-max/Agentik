@@ -4,5 +4,6 @@ release/
 .env
 .DS_Store
 .agetik/
+.agentik/
 *.log
 hand-drawn-people-avatar-collection/

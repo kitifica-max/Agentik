@@ -1,7 +1,7 @@
 import chokidar, { type FSWatcher } from 'chokidar';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 
-// Vigila solo las carpetas autorizadas. Ignora ocultos (.agetik, .git, .env).
+// Vigila solo las carpetas autorizadas. Ignora ocultos (.agentik, .git, .env).
 export function startFileWatcher(folders: string[], onChange: (path: string) => void): FSWatcher | null {
   const roots = folders.filter((f) => isAbsolute(f)).map((f) => resolve(f));
   if (roots.length === 0) return null;
