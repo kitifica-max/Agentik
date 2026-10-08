@@ -2,6 +2,8 @@
   "name": "agentik",
   "version": "0.1.0",
   "description": "Agentik: agente personal de escritorio para macOS",
+  "license": "MIT",
+  "author": "Daniel Pineda",
   "private": true,
   "main": "dist/main/index.js",
   "scripts": {

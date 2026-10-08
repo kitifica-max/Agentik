@@ -2,7 +2,7 @@
 
 Agente personal de escritorio para macOS. Un personaje flotante observa tu trabajo, recuerda lo que le pides y puede modificar archivos cuando lo autorizas.
 
-Estado: **Fase 4 (en revisión)**. Herramientas de archivo con diff preview, aprobación, backups y audit log.
+Estado: **en desarrollo (v0.1)**. Solo macOS. El agente puede ejecutar comandos y modificar archivos: lee [Seguridad y advertencias](#seguridad-y-advertencias) antes de usarlo.
 
 ## Instalación
 
@@ -164,6 +164,18 @@ En la pestaña **Modelo** eliges con qué modelo trabaja Agentik (el cambio apli
 - Desactiva el observador: deja de registrar de inmediato.
 - Borra el archivo `~/Library/Application Support/agetik/agetik.db` para eliminar todo el historial.
 - Los recuerdos se borran desde el panel de memoria, sin copias ni resúmenes derivados.
+
+## Seguridad y advertencias
+
+- **Es un agente con poder real:** a petición tuya puede mover y escribir archivos y ejecutar comandos de shell. Hay una red de seguridad (bloquea `sudo`, `rm` masivo, `mkfs`, `dd` a disco y `curl | sh`, y limita las operaciones de archivos a tus carpetas autorizadas), pero **no es un sandbox**. Úsalo bajo tu responsabilidad.
+- **Lo que se envía fuera:** tus mensajes y el contexto (actividad reciente, listados de carpetas y el contenido de los archivos que el modelo lea) van al proveedor del modelo que elijas (Anthropic, una API compatible con OpenAI, o Ollama en la nube). Con un modelo **local** de Ollama no sale nada de tu Mac.
+- **API keys:** se guardan cifradas con el Llavero de macOS, nunca en el repo, la base de datos ni los logs.
+- **Sin telemetría.** Todo (observador, memoria, hábitos) queda en tu equipo.
+- **App sin firmar:** el `.dmg` no está firmado ni notarizado. Si macOS la bloquea, ábrela con clic derecho o ejecuta `xattr -cr /Applications/Agentik.app`.
+
+## Licencia y créditos
+
+El **código** es [MIT](LICENSE). Las **ilustraciones** de los avatares no están bajo esa licencia: son de terceros (Designed by Freepik) y siguen sus términos. Detalles en [CREDITS.md](CREDITS.md).
 
 ## Estructura
 
