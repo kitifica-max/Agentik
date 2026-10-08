@@ -27,10 +27,13 @@
   var suggestionText = document.getElementById('suggestion-text');
   var suggestionAccept = document.getElementById('suggestion-accept');
   var suggestionDismiss = document.getElementById('suggestion-dismiss');
+  var folderListEl = document.getElementById('folder-list');
+  var addFolderBtn = document.getElementById('add-folder');
 
   var current = { enabled: false, paused: false };
   var pendingMemory = null;
   var pendingSuggestion = null;
+  var pendingOpsCount = 0;
 
   function renderStatus(s) {
     current = s;
@@ -55,6 +58,12 @@
     messages.scrollTop = messages.scrollHeight;
   }
 
+  function updateFilesBadge(count) {
+    pendingOpsCount = count;
+    tabFiles.textContent = count > 0 ? 'Archivos (' + count + ')' : 'Archivos';
+    tabFiles.classList.toggle('has-badge', count > 0);
+  }
+
   function showTab(name) {
     viewChat.hidden = name !== 'chat';
     viewMemory.hidden = name !== 'memory';
@@ -63,7 +72,7 @@
     tabMemory.classList.toggle('active', name === 'memory');
     tabFiles.classList.toggle('active', name === 'files');
     if (name === 'memory') loadMemories();
-    if (name === 'files') loadFileEdits();
+    if (name === 'files') { loadFileEdits(); loadFolders(); }
   }
 
   function loadMemories() {
@@ -136,9 +145,39 @@
     api.invoke(ch.fileEditList).then(function (list) {
       fileEditList.innerHTML = '';
       if (!list || list.length === 0) {
-        fileEditList.innerHTML = '<p class="muted">Sin ediciones pendientes.</p>';
+        fileEditList.innerHTML = '<p class="muted">Sin operaciones pendientes.</p>';
+        updateFilesBadge(0);
         return;
       }
+      var pending = list.filter(function (e) { return e.status === 'propuesto'; }).length;
+      updateFilesBadge(pending);
+      if (pending > 1) {
+        var batchBar = document.createElement('div');
+        batchBar.className = 'batch-actions';
+        var approveAllBtn = document.createElement('button');
+        approveAllBtn.className = 'btn btn-sm btn-ok';
+        approveAllBtn.textContent = 'Aprobar todo (' + pending + ')';
+        approveAllBtn.onclick = function () {
+          approveAllBtn.disabled = true;
+          api.invoke(ch.fileEditApproveAll).then(function (res) {
+            showToast(res.applied + ' aplicadas' + (res.failed.length ? ', ' + res.failed.length + ' fallidas' : ''));
+            loadFileEdits();
+          });
+        };
+        var rejectAllBtn = document.createElement('button');
+        rejectAllBtn.className = 'btn btn-sm btn-danger';
+        rejectAllBtn.textContent = 'Rechazar todo';
+        rejectAllBtn.onclick = function () {
+          api.invoke(ch.fileEditRejectAll).then(function () {
+            showToast('Todas rechazadas');
+            loadFileEdits();
+          });
+        };
+        batchBar.appendChild(approveAllBtn);
+        batchBar.appendChild(rejectAllBtn);
+        fileEditList.appendChild(batchBar);
+      }
+
       list.forEach(function (edit) {
         var item = document.createElement('div');
         item.className = 'file-edit-item';
@@ -155,6 +194,16 @@
         statusSpan.textContent = edit.status;
         header.appendChild(statusSpan);
         item.appendChild(header);
+
+        var opLabel = '';
+        if (edit.diff && edit.diff.startsWith('mover:')) opLabel = 'MOVER';
+        else if (edit.diff && edit.diff.startsWith('copiar:')) opLabel = 'COPIAR';
+        else if (edit.diff && edit.diff.startsWith('crear carpeta:')) opLabel = 'MKDIR';
+        else opLabel = 'EDITAR';
+        var opSpan = document.createElement('span');
+        opSpan.className = 'file-edit-op file-edit-op-' + opLabel.toLowerCase();
+        opSpan.textContent = opLabel;
+        header.insertBefore(opSpan, statusSpan);
 
         if (edit.diff) {
           item.appendChild(renderDiff(edit.diff));
@@ -183,6 +232,50 @@
         fileEditList.appendChild(item);
       });
     });
+  }
+
+  // Folders management
+  function loadFolders() {
+    api.invoke(ch.configGetFolders).then(function (folders) {
+      folderListEl.innerHTML = '';
+      if (!folders || folders.length === 0) {
+        folderListEl.innerHTML = '<p class="muted">Sin carpetas configuradas. Agrega una para habilitar operaciones de archivos.</p>';
+        return;
+      }
+      folders.forEach(function (f) {
+        var item = document.createElement('div');
+        item.className = 'folder-item';
+        var path = document.createElement('span');
+        path.className = 'folder-path';
+        path.textContent = f.replace(/^\/Users\/[^/]+/, '~');
+        path.title = f;
+        var removeBtn = document.createElement('button');
+        removeBtn.className = 'btn btn-xs btn-danger';
+        removeBtn.textContent = '✗';
+        removeBtn.onclick = function () {
+          api.invoke(ch.configRemoveFolder, f).then(function () { loadFolders(); });
+        };
+        item.appendChild(path);
+        item.appendChild(removeBtn);
+        folderListEl.appendChild(item);
+      });
+    });
+  }
+
+  addFolderBtn.addEventListener('click', function () {
+    api.invoke(ch.configAddFolder).then(function () { loadFolders(); });
+  });
+
+  function showToast(text) {
+    var toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = text;
+    document.body.appendChild(toast);
+    setTimeout(function () { toast.classList.add('show'); }, 10);
+    setTimeout(function () {
+      toast.classList.remove('show');
+      setTimeout(function () { toast.remove(); }, 300);
+    }, 3000);
   }
 
   // Tabs
@@ -251,8 +344,9 @@
 
   // File edit proposed from AI
   api.on(ch.fileEditProposed, function (edit) {
-    showTab('files');
+    updateFilesBadge(pendingOpsCount + 1);
     loadFileEdits();
+    showToast('Nueva operación propuesta — revisa en Archivos');
   });
 
   // Suggestions

@@ -3,7 +3,7 @@ import { writeFileSync, readFileSync, mkdirSync, rmSync, existsSync } from 'node
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { memoryDb } from './helpers.js';
-import { proposeFileEdit, approveFileEdit, rejectFileEdit, listFileEdits, logAudit, getAuditLog } from '../src/files/fileTools.js';
+import { proposeFileEdit, proposeFileMove, proposeFileMkdir, proposeFileCopy, approveFileEdit, approveAllFileEdits, rejectFileEdit, rejectAllFileEdits, listFileEdits, logAudit, getAuditLog } from '../src/files/fileTools.js';
 import type { Config } from '../src/shared/types.js';
 
 const testDir = join(tmpdir(), 'agetik-test-' + Date.now());
@@ -147,6 +147,155 @@ describe('audit log', () => {
     writeFileSync(file, 'x');
     proposeFileEdit(db, testConfig(), file, 'y');
     const log = getAuditLog(db);
-    expect(log.some(e => e.action === 'file_edit_proposed')).toBe(true);
+    expect(log.some(e => e.action === 'file_write_proposed')).toBe(true);
+  });
+});
+
+describe('proposeFileMove', () => {
+  it('propone mover archivo existente', () => {
+    const db = memoryDb();
+    const src = join(allowedDir, 'mover.txt');
+    const dest = join(allowedDir, 'sub/movido.txt');
+    writeFileSync(src, 'data');
+    const result = proposeFileMove(db, testConfig(), src, dest);
+    expect('id' in result).toBe(true);
+    if ('id' in result) {
+      expect(result.diff).toContain('mover:');
+    }
+  });
+
+  it('rechaza mover archivo inexistente', () => {
+    const db = memoryDb();
+    const result = proposeFileMove(db, testConfig(), join(allowedDir, 'nope.txt'), join(allowedDir, 'dest.txt'));
+    expect('error' in result).toBe(true);
+  });
+
+  it('rechaza mover fuera de carpetas autorizadas', () => {
+    const db = memoryDb();
+    const src = join(allowedDir, 'a.txt');
+    writeFileSync(src, 'x');
+    const result = proposeFileMove(db, testConfig(), src, '/tmp/outside.txt');
+    expect('error' in result).toBe(true);
+  });
+});
+
+describe('proposeFileMkdir', () => {
+  it('propone crear carpeta nueva', () => {
+    const db = memoryDb();
+    const dir = join(allowedDir, 'nueva-carpeta');
+    const result = proposeFileMkdir(db, testConfig(), dir);
+    expect('id' in result).toBe(true);
+    if ('id' in result) {
+      expect(result.diff).toContain('crear carpeta:');
+    }
+  });
+
+  it('rechaza carpeta que ya existe', () => {
+    const db = memoryDb();
+    const result = proposeFileMkdir(db, testConfig(), allowedDir);
+    expect('error' in result).toBe(true);
+  });
+});
+
+describe('proposeFileCopy', () => {
+  it('propone copiar archivo', () => {
+    const db = memoryDb();
+    const src = join(allowedDir, 'original.txt');
+    const dest = join(allowedDir, 'copia.txt');
+    writeFileSync(src, 'contenido');
+    const result = proposeFileCopy(db, testConfig(), src, dest);
+    expect('id' in result).toBe(true);
+    if ('id' in result) {
+      expect(result.diff).toContain('copiar:');
+    }
+  });
+});
+
+describe('approveFileEdit ops', () => {
+  it('aprueba move: mueve archivo', () => {
+    const db = memoryDb();
+    const src = join(allowedDir, 'mv-src.txt');
+    const dest = join(allowedDir, 'mv-dest.txt');
+    writeFileSync(src, 'mover esto');
+    const proposed = proposeFileMove(db, testConfig(), src, dest);
+    if (!('id' in proposed)) return;
+    const result = approveFileEdit(db, proposed.id, backupDir);
+    expect('id' in result).toBe(true);
+    if ('id' in result) {
+      expect(result.status).toBe('aplicado');
+      expect(existsSync(dest)).toBe(true);
+      expect(existsSync(src)).toBe(false);
+    }
+  });
+
+  it('aprueba mkdir: crea carpeta', () => {
+    const db = memoryDb();
+    const dir = join(allowedDir, 'nueva');
+    const proposed = proposeFileMkdir(db, testConfig(), dir);
+    if (!('id' in proposed)) return;
+    const result = approveFileEdit(db, proposed.id, backupDir);
+    expect('id' in result).toBe(true);
+    if ('id' in result) {
+      expect(existsSync(dir)).toBe(true);
+    }
+  });
+
+  it('aprueba copy: copia archivo', () => {
+    const db = memoryDb();
+    const src = join(allowedDir, 'cp-src.txt');
+    const dest = join(allowedDir, 'cp-dest.txt');
+    writeFileSync(src, 'copiar esto');
+    const proposed = proposeFileCopy(db, testConfig(), src, dest);
+    if (!('id' in proposed)) return;
+    const result = approveFileEdit(db, proposed.id, backupDir);
+    expect('id' in result).toBe(true);
+    if ('id' in result) {
+      expect(readFileSync(dest, 'utf8')).toBe('copiar esto');
+      expect(existsSync(src)).toBe(true);
+    }
+  });
+});
+
+describe('approveAllFileEdits', () => {
+  it('aprueba todas en orden correcto (mkdir antes de move)', () => {
+    const db = memoryDb();
+    const src = join(allowedDir, 'batch-file.txt');
+    const subdir = join(allowedDir, 'batch-sub');
+    const dest = join(subdir, 'batch-file.txt');
+    writeFileSync(src, 'batch');
+
+    proposeFileMkdir(db, testConfig(), subdir);
+    proposeFileMove(db, testConfig(), src, dest);
+
+    const result = approveAllFileEdits(db, backupDir);
+    expect(result.applied).toBe(2);
+    expect(result.failed.length).toBe(0);
+    expect(existsSync(subdir)).toBe(true);
+    expect(existsSync(dest)).toBe(true);
+    expect(existsSync(src)).toBe(false);
+  });
+
+  it('retorna 0 si no hay pendientes', () => {
+    const db = memoryDb();
+    const result = approveAllFileEdits(db, backupDir);
+    expect(result.applied).toBe(0);
+  });
+});
+
+describe('rejectAllFileEdits', () => {
+  it('rechaza todas las pendientes', () => {
+    const db = memoryDb();
+    const f1 = join(allowedDir, 'rej1.txt');
+    const f2 = join(allowedDir, 'rej2.txt');
+    writeFileSync(f1, 'a');
+    writeFileSync(f2, 'b');
+    proposeFileEdit(db, testConfig(), f1, 'x');
+    proposeFileEdit(db, testConfig(), f2, 'y');
+
+    const count = rejectAllFileEdits(db);
+    expect(count).toBe(2);
+
+    const list = listFileEdits(db);
+    expect(list.every(e => e.status === 'rechazado')).toBe(true);
   });
 });

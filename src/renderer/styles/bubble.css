@@ -280,6 +280,84 @@ html, body {
 .memory-aprobado { border-left: 3px solid var(--ok); }
 .memory-rechazado { opacity: 0.5; border-left: 3px solid var(--danger); }
 
+/* Carpetas autorizadas */
+.folders-section {
+  padding-bottom: 6px;
+}
+
+.folders-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.folders-title {
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.folder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.folder-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: var(--assistant-bg);
+  font-size: 12px;
+}
+
+.folder-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  margin-right: 6px;
+}
+
+.section-divider {
+  border-top: 1px solid var(--line);
+  margin: 4px 0;
+}
+
+/* Badge en tab Archivos */
+.tab.has-badge {
+  color: var(--ok);
+  font-weight: 700;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  background: var(--ink);
+  color: var(--paper);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 100;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.toast.show {
+  opacity: 0.9;
+  transform: translateX(-50%) translateY(0);
+}
+
 .file-edit-list {
   flex: 1;
   overflow-y: auto;
@@ -314,6 +392,19 @@ html, body {
 .file-edit-status-rechazado { background: rgba(197, 48, 48, 0.12); color: var(--danger); }
 .file-edit-status-fallido { background: rgba(197, 48, 48, 0.12); color: var(--danger); }
 
+.file-edit-op {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-right: 6px;
+  letter-spacing: 0.5px;
+}
+.file-edit-op-editar { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+.file-edit-op-mover { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
+.file-edit-op-copiar { background: rgba(14, 165, 233, 0.15); color: #0ea5e9; }
+.file-edit-op-mkdir { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+
 .diff-preview {
   margin: 4px 0;
   padding: 4px 6px;
@@ -330,6 +421,16 @@ html, body {
 
 .diff-add { color: var(--ok); }
 .diff-del { color: var(--danger); }
+
+.batch-actions {
+  display: flex;
+  gap: 6px;
+  padding: 6px 0;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.batch-actions .btn { flex: 1; }
 
 .file-edit-actions { display: flex; gap: 4px; margin-top: 4px; }
 

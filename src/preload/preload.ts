@@ -23,16 +23,22 @@ const IPC = {
   suggestionDismiss: 'suggestion:dismiss',
   fileEditList: 'file-edit:list',
   fileEditApprove: 'file-edit:approve',
+  fileEditApproveAll: 'file-edit:approve-all',
   fileEditReject: 'file-edit:reject',
+  fileEditRejectAll: 'file-edit:reject-all',
   fileEditProposed: 'file-edit:proposed',
   auditLog: 'audit:log',
+  configGetFolders: 'config:get-folders',
+  configAddFolder: 'config:add-folder',
+  configRemoveFolder: 'config:remove-folder',
 } as const;
 
 const INVOKE: string[] = [
   IPC.observerStatus, IPC.observerSetEnabled, IPC.observerTogglePause,
   IPC.chatSend, IPC.memoryList, IPC.memoryApprove, IPC.memoryReject, IPC.memoryDelete,
   IPC.suggestionAccept, IPC.suggestionDismiss,
-  IPC.fileEditList, IPC.fileEditApprove, IPC.fileEditReject, IPC.auditLog,
+  IPC.fileEditList, IPC.fileEditApprove, IPC.fileEditApproveAll, IPC.fileEditReject, IPC.fileEditRejectAll, IPC.auditLog,
+  IPC.configGetFolders, IPC.configAddFolder, IPC.configRemoveFolder,
 ];
 const SEND: string[] = [IPC.bubbleToggle, IPC.windowMoveBy, IPC.windowDragEnd, IPC.appQuit];
 const LISTEN: string[] = [IPC.characterState, IPC.observerChanged, IPC.chatReply, IPC.chatThinking, IPC.memoryProposed, IPC.suggestionShow, IPC.fileEditProposed];

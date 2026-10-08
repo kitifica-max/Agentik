@@ -1,21 +1,24 @@
-import { app, BrowserWindow, globalShortcut, screen } from 'electron';
+import { app, BrowserWindow, dialog, globalShortcut, screen } from 'electron';
 import { join } from 'node:path';
 import { config as loadEnv } from 'dotenv';
+import type { FSWatcher } from 'chokidar';
 import { openDb, getState, setState, type Db } from '../db/db.js';
 import { Observer } from '../observer/observer.js';
 import { readActiveWindow } from '../observer/activeWindow.js';
 import { purgeExpired } from '../observer/retention.js';
 import { startFileWatcher } from '../observer/fileWatcher.js';
-import { loadConfig } from './config.js';
+import { loadUserConfig, saveConfig } from './config.js';
 import { registerIpc } from './ipc.js';
 import { IPC } from '../shared/ipc-channels.js';
 import { AiClient } from '../ai/client.js';
 import { proposeMemory, approveMemory, rejectMemory, deleteMemory, listMemories } from '../memory/memory.js';
 import { SuggestionEngine, type Suggestion } from '../suggestions/engine.js';
-import { proposeFileEdit, approveFileEdit, rejectFileEdit, listFileEdits, getAuditLog } from '../files/fileTools.js';
+import { proposeFileEdit, proposeFileMove, proposeFileMkdir, proposeFileCopy, approveFileEdit, approveAllFileEdits, rejectFileEdit, rejectAllFileEdits, listFileEdits, getAuditLog } from '../files/fileTools.js';
 import type { CharacterState, Config, MemoryTipo, ObserverStatus } from '../shared/types.js';
 
+// ponytail: busca .env en proyecto (dev) y ~/.agetik.env (producción)
 loadEnv();
+loadEnv({ path: join(app.getPath('home'), '.agetik.env') });
 
 const CHAR_SIZE = { width: 150, height: 160 };
 const BUBBLE_SIZE = { width: 360, height: 480 };
@@ -30,7 +33,33 @@ let ai: AiClient;
 let suggestions: SuggestionEngine;
 let activeSuggestion: Suggestion | null = null;
 let backupDir: string;
+let fileWatcher: FSWatcher | null = null;
 const SUGGESTION_POLL_MS = 30_000;
+
+function restartFileWatcher(): void {
+  fileWatcher?.close();
+  fileWatcher = startFileWatcher(config.allowed_folders, (p) => observer.recordFileChange(p));
+}
+
+async function handleAddFolder(): Promise<string[]> {
+  const result = await dialog.showOpenDialog({ properties: ['openDirectory', 'multiSelections'] });
+  if (result.canceled || result.filePaths.length === 0) return config.allowed_folders;
+  for (const folder of result.filePaths) {
+    if (!config.allowed_folders.includes(folder)) {
+      config.allowed_folders.push(folder);
+    }
+  }
+  saveConfig(config);
+  restartFileWatcher();
+  return config.allowed_folders;
+}
+
+function handleRemoveFolder(folder: string): string[] {
+  config.allowed_folders = config.allowed_folders.filter(f => f !== folder);
+  saveConfig(config);
+  restartFileWatcher();
+  return config.allowed_folders;
+}
 
 function savedPosition(): { x: number; y: number } {
   const raw = getState(db, 'window_position');
@@ -144,17 +173,38 @@ async function handleChat(msg: string): Promise<{ reply: string }> {
       }
     }
 
-    // Parse file edit proposals from AI response
-    const editMatch = result.reply.match(/\[FILE_EDIT:(.+?)\]([\s\S]+?)\[\/FILE_EDIT\]/);
-    if (editMatch) {
-      const editResult = proposeFileEdit(db, config, editMatch[1], editMatch[2]);
-      if ('id' in editResult) {
+    // Parse file operations from AI response
+    let cleanReply = result.reply;
+    const ops: Array<{ result: ReturnType<typeof proposeFileEdit> }> = [];
+
+    for (const m of cleanReply.matchAll(/\[FILE_EDIT:(.+?)\]([\s\S]+?)\[\/FILE_EDIT\]/g)) {
+      ops.push({ result: proposeFileEdit(db, config, m[1], m[2]) });
+    }
+    cleanReply = cleanReply.replace(/\[FILE_EDIT:.+?\][\s\S]+?\[\/FILE_EDIT\]/g, '');
+
+    for (const m of cleanReply.matchAll(/\[FILE_MOVE:(.+?):(.+?)\]/g)) {
+      ops.push({ result: proposeFileMove(db, config, m[1], m[2]) });
+    }
+    cleanReply = cleanReply.replace(/\[FILE_MOVE:.+?:.+?\]/g, '');
+
+    for (const m of cleanReply.matchAll(/\[FILE_MKDIR:(.+?)\]/g)) {
+      ops.push({ result: proposeFileMkdir(db, config, m[1]) });
+    }
+    cleanReply = cleanReply.replace(/\[FILE_MKDIR:.+?\]/g, '');
+
+    for (const m of cleanReply.matchAll(/\[FILE_COPY:(.+?):(.+?)\]/g)) {
+      ops.push({ result: proposeFileCopy(db, config, m[1], m[2]) });
+    }
+    cleanReply = cleanReply.replace(/\[FILE_COPY:.+?:.+?\]/g, '');
+
+    for (const { result: opResult } of ops) {
+      if ('id' in opResult) {
         setCharacterState('esperando-aprobacion');
-        bubble?.webContents.send(IPC.fileEditProposed, editResult);
+        bubble?.webContents.send(IPC.fileEditProposed, opResult);
       }
     }
 
-    const cleanReply = result.reply.replace(/\[FILE_EDIT:.+?\][\s\S]+?\[\/FILE_EDIT\]/g, '').trim();
+    cleanReply = cleanReply.trim();
     return { reply: cleanReply || result.reply };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Error desconocido';
@@ -191,7 +241,7 @@ function handleSuggestionDismiss(id: string): void {
 app.whenReady().then(() => {
   app.dock?.hide();
 
-  config = loadConfig(join(app.getAppPath(), 'config.json'));
+  config = loadUserConfig(app.getPath('userData'), join(app.getAppPath(), 'config.json'));
   db = openDb(join(app.getPath('userData'), 'agetik.db'));
   backupDir = join(app.getPath('userData'), 'backups');
   observer = new Observer(db, config, readActiveWindow, pushStatus);
@@ -225,15 +275,20 @@ app.whenReady().then(() => {
     suggestionDismiss: handleSuggestionDismiss,
     fileEditList: () => listFileEdits(db),
     fileEditApprove: (id) => approveFileEdit(db, id, backupDir),
+    fileEditApproveAll: () => approveAllFileEdits(db, backupDir),
     fileEditReject: (id) => rejectFileEdit(db, id),
+    fileEditRejectAll: () => rejectAllFileEdits(db),
     auditLog: () => getAuditLog(db),
+    configGetFolders: () => config.allowed_folders,
+    configAddFolder: handleAddFolder,
+    configRemoveFolder: handleRemoveFolder,
   });
 
   setInterval(() => void observer.tick(), config.observer_poll_ms);
   setInterval(evaluateSuggestions, SUGGESTION_POLL_MS);
   purgeExpired(db, config.retention_hours);
   setInterval(() => purgeExpired(db, config.retention_hours), RETENTION_EVERY_MS);
-  startFileWatcher(config.allowed_folders, (p) => observer.recordFileChange(p));
+  fileWatcher = startFileWatcher(config.allowed_folders, (p) => observer.recordFileChange(p));
 
   globalShortcut.register('CommandOrControl+Shift+P', () => {
     observer.togglePause();

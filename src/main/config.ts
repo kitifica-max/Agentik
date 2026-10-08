@@ -1,8 +1,8 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, copyFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { z } from 'zod';
 import type { Config } from '../shared/types';
 
-// Defaults de seguridad en código: aunque config.json falte o venga vacío, los filtros sensibles siguen activos.
 export const DEFAULT_EXCLUDED_APPS = ['Bitwarden', '1Password', 'Keychain Access', 'Wallet'];
 export const DEFAULT_EXCLUDED_TITLE_PATTERNS = [
   'banco', 'bancaria', 'contraseña', 'password', 'login',
@@ -26,4 +26,19 @@ export function parseConfig(raw: unknown): Config {
 
 export function loadConfig(file: string): Config {
   return parseConfig(JSON.parse(readFileSync(file, 'utf8')));
+}
+
+let userConfigPath = '';
+
+export function loadUserConfig(userDataDir: string, bundledFile: string): Config {
+  userConfigPath = join(userDataDir, 'config.json');
+  if (!existsSync(userConfigPath)) {
+    copyFileSync(bundledFile, userConfigPath);
+  }
+  return loadConfig(userConfigPath);
+}
+
+export function saveConfig(config: Config): void {
+  if (!userConfigPath) return;
+  writeFileSync(userConfigPath, JSON.stringify(config, null, 2), 'utf8');
 }

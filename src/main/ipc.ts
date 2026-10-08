@@ -26,8 +26,13 @@ export interface IpcHandlers {
   suggestionDismiss: (id: string) => void;
   fileEditList: () => unknown;
   fileEditApprove: (id: number) => unknown;
+  fileEditApproveAll: () => unknown;
   fileEditReject: (id: number) => unknown;
+  fileEditRejectAll: () => unknown;
   auditLog: () => unknown;
+  configGetFolders: () => string[];
+  configAddFolder: () => Promise<string[]>;
+  configRemoveFolder: (folder: string) => string[];
 }
 
 export function registerIpc(h: IpcHandlers): void {
@@ -80,10 +85,20 @@ export function registerIpc(h: IpcHandlers): void {
     if (!parsed.success) return { error: 'ID inválido' };
     return h.fileEditApprove(parsed.data);
   });
+  ipcMain.handle(IPC.fileEditApproveAll, () => h.fileEditApproveAll());
   ipcMain.handle(IPC.fileEditReject, (_e, raw: unknown) => {
     const parsed = memId.safeParse(raw);
     if (!parsed.success) return false;
     return h.fileEditReject(parsed.data);
   });
+  ipcMain.handle(IPC.fileEditRejectAll, () => h.fileEditRejectAll());
   ipcMain.handle(IPC.auditLog, () => h.auditLog());
+
+  ipcMain.handle(IPC.configGetFolders, () => h.configGetFolders());
+  ipcMain.handle(IPC.configAddFolder, () => h.configAddFolder());
+  ipcMain.handle(IPC.configRemoveFolder, (_e, raw: unknown) => {
+    const parsed = z.string().min(1).safeParse(raw);
+    if (!parsed.success) return [];
+    return h.configRemoveFolder(parsed.data);
+  });
 }
