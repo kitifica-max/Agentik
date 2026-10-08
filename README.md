@@ -45,6 +45,10 @@ Si le pides que recuerde algo, propone un recuerdo. Solo se guarda si lo aprueba
 - **Detener:** mientras Agentik trabaja aparece **Detener** (o pulsa **Esc**). Corta la llamada al modelo y mata el comando que esté corriendo; lo que ya se alcanzó a hacer queda hecho y te lo dice.
 - **Borrar historial:** botón en el chat y en Ajustes (también el atajo de "chat nuevo"). Se elimina de verdad del disco, sin dejar copias en el archivo de la base de datos.
 
+## Guía de inicio
+
+La primera vez que abres Agentik aparece una guía de 4 pasos: qué es, primeros pasos (modelo, carpeta, observador, primer mensaje; se marcan solos), ejemplos para probar y cómo mantener el control. Se puede saltar. Vuelve a abrirla con el botón **?** de la burbuja o desde **Ajustes**.
+
 ## Memoria
 
 La pestaña **Memoria** en la burbuja muestra todos los recuerdos: propuestos, aprobados y rechazados. Puedes aprobar, rechazar o eliminar desde ahí. Un recuerdo eliminado desaparece sin dejar copias.
@@ -190,6 +194,7 @@ En la pestaña **Modelo** eliges con qué modelo trabaja Agentik (el cambio apli
 ## Seguridad y advertencias
 
 - **Es un agente con poder real:** a petición tuya puede mover y escribir archivos y ejecutar comandos de shell. Hay una red de seguridad (bloquea `sudo`, `rm` masivo, `mkfs`, `dd` a disco y `curl | sh`, y limita las operaciones de archivos a tus carpetas autorizadas), pero **no es un sandbox**. Úsalo bajo tu responsabilidad.
+- **Carpetas autorizadas con tope:** Agentik no acepta como carpeta autorizada algo demasiado amplio: el disco entero (también como "Macintosh HD"), un disco externo completo, tu carpeta personal entera, `Library` ni carpetas del sistema. Lo rechaza al agregarlo, lo quita solo al arrancar si ya estaba guardado, y las herramientas nunca lo tratan como permiso. Elige carpetas concretas (Descargas, Documentos, un proyecto).
 - **Lo que se envía fuera:** tus mensajes y el contexto (actividad reciente, listados de carpetas y el contenido de los archivos que el modelo lea) van al proveedor del modelo que elijas (Anthropic, una API compatible con OpenAI, o Ollama en la nube). Con un modelo **local** de Ollama no sale nada de tu Mac.
 - **API keys:** se guardan cifradas con el Llavero de macOS, nunca en el repo, la base de datos ni los logs.
 - **Sin telemetría.** Todo (observador, memoria, hábitos) queda en tu equipo.

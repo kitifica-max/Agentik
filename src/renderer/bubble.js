@@ -27,6 +27,7 @@
   var suggestionText = document.getElementById('suggestion-text');
   var suggestionAccept = document.getElementById('suggestion-accept');
   var suggestionDismiss = document.getElementById('suggestion-dismiss');
+  var viewGuide = document.getElementById('view-guide');
   var tabSettings = document.getElementById('tab-settings');
   var viewSettings = document.getElementById('view-settings');
   var avatarChoices = document.getElementById('avatar-choices');
@@ -94,6 +95,7 @@
     viewFiles.hidden = name !== 'files';
     viewModels.hidden = name !== 'models';
     viewSettings.hidden = name !== 'settings';
+    viewGuide.hidden = name !== 'guide';
     tabSettings.classList.toggle('active', name === 'settings');
     tabModels.classList.toggle('active', name === 'models');
     tabChat.classList.toggle('active', name === 'chat');
@@ -103,6 +105,7 @@
     if (name === 'files') { loadFileEdits(); loadFolders(); }
     if (name === 'models') loadModels();
     if (name === 'settings') loadSettings();
+    if (name === 'guide') renderGuide();
   }
 
   function loadMemories() {
@@ -535,6 +538,99 @@
   setSound.addEventListener('change', function () { api.invoke(ch.settingsSet, { sounds: setSound.checked }); });
   document.getElementById('set-test').addEventListener('click', function () { window.AgentikSounds.playPop(); });
 
+  // ── Guía de inicio: se abre sola la primera vez; después con el botón "?" o desde Ajustes
+  var G = window.AgentikOnboarding;
+  var guideIdx = 0;
+  var guideState = { hasModel: false, folders: 0, observing: false, chatted: false };
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text) e.textContent = text;
+    return e;
+  }
+
+  function guideGo(target) {
+    if (target === 'observer') {
+      if (!current.enabled) api.invoke(ch.observerSetEnabled, true).then(function (s) { renderStatus(s); renderGuide(); });
+      return;
+    }
+    showTab(target);
+  }
+
+  function renderGuide() {
+    Promise.all([api.invoke(ch.modelsList), api.invoke(ch.configGetFolders)]).then(function (r) {
+      var profiles = (r[0] && r[0].profiles) || [];
+      guideState.hasModel = profiles.some(function (p) { return p.provider === 'ollama' || p.hasKey; });
+      guideState.folders = (r[1] || []).length;
+      guideState.observing = !!current.enabled;
+      guideState.chatted = !!messages.querySelector('.msg-user');
+      drawGuide();
+    });
+  }
+
+  function drawGuide() {
+    var step = G.STEPS[guideIdx];
+    var body = document.getElementById('guide-body');
+    body.innerHTML = '';
+    body.appendChild(el('h3', 'guide-title', step.title));
+    if (!step.checklist && !step.examples) {
+      step.body.forEach(function (t) { body.appendChild(el('p', 'guide-text', t)); });
+    }
+    if (step.checklist) {
+      var items = G.checklist(guideState);
+      body.appendChild(el('p', 'guide-text', G.progress(items).text + '. ' + step.body[0]));
+      items.forEach(function (it) {
+        var row = el('div', 'guide-item' + (it.done ? ' done' : ''));
+        row.appendChild(el('span', 'guide-check', it.done ? '✓' : '○'));
+        var txt = el('div', 'guide-item-text');
+        txt.appendChild(el('div', 'guide-item-title', it.title));
+        txt.appendChild(el('div', 'muted', it.hint));
+        row.appendChild(txt);
+        if (!it.done) {
+          var go = el('button', 'btn btn-xs btn-ok', it.goLabel);
+          go.type = 'button';
+          go.onclick = function () { guideGo(it.go); };
+          row.appendChild(go);
+        }
+        body.appendChild(row);
+      });
+    }
+    if (step.examples) {
+      body.appendChild(el('p', 'guide-text', step.body[0]));
+      G.EXAMPLES.forEach(function (ex) {
+        var b = el('button', 'guide-example');
+        b.type = 'button';
+        b.appendChild(el('span', 'guide-example-text', '«' + ex.text + '»'));
+        b.appendChild(el('span', 'muted', ex.note));
+        b.onclick = function () { showTab('chat'); chatInput.value = ex.text; chatInput.focus(); };
+        body.appendChild(b);
+      });
+    }
+    var last = guideIdx === G.STEPS.length - 1;
+    document.getElementById('guide-back').hidden = guideIdx === 0;
+    document.getElementById('guide-skip').hidden = last;
+    document.getElementById('guide-next').textContent = last ? 'Listo' : 'Siguiente';
+    var dots = document.getElementById('guide-dots');
+    dots.innerHTML = '';
+    G.STEPS.forEach(function (s, i) { dots.appendChild(el('span', 'guide-dot' + (i === guideIdx ? ' on' : ''))); });
+  }
+
+  function openGuide() { guideIdx = 0; showTab('guide'); }
+  function closeGuide() {
+    api.invoke(ch.settingsSet, { onboarding_done: true });
+    showTab('chat');
+  }
+  document.getElementById('guide-open').addEventListener('click', openGuide);
+  document.getElementById('set-guide').addEventListener('click', openGuide);
+  document.getElementById('guide-skip').addEventListener('click', closeGuide);
+  document.getElementById('guide-back').addEventListener('click', function () { guideIdx = Math.max(0, guideIdx - 1); drawGuide(); });
+  document.getElementById('guide-next').addEventListener('click', function () {
+    if (guideIdx >= G.STEPS.length - 1) { closeGuide(); return; }
+    guideIdx++;
+    renderGuide();
+  });
+
   // Tabs
   tabChat.addEventListener('click', function () { showTab('chat'); });
   tabMemory.addEventListener('click', function () { showTab('memory'); });
@@ -680,6 +776,7 @@
   loadCost();
   loadModels();
   loadMemories();
+  api.invoke(ch.settingsGet).then(function (s) { if (s && !s.onboarding_done) openGuide(); }); // primera vez
   api.on(ch.observerChanged, renderStatus);
   api.invoke(ch.observerStatus).then(renderStatus);
 })();

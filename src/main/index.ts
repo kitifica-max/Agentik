@@ -15,6 +15,7 @@ import { SecretStore } from './secrets.js';
 import { notificationBody, shouldNotify } from './notify.js';
 import { learn, MIN_HABIT_DAYS } from '../memory/insights.js';
 import { abortable } from '../chat/abort.js';
+import { broadFolderReason, sanitizeFolders } from '../shared/paths.js';
 import { saveExchange, loadHistory, modelContext, clearHistory, type ChatKind } from '../chat/history.js';
 import { proposeMemory, approveMemory, rejectMemory, deleteMemory, listMemories } from '../memory/memory.js';
 import { SuggestionEngine, type Suggestion } from '../suggestions/engine.js';
@@ -46,6 +47,10 @@ let suggestions: SuggestionEngine;
 let activeSuggestion: Suggestion | null = null;
 let backupDir: string;
 let fileWatcher: FSWatcher | null = null;
+
+// Red de seguridad: un error no capturado se registra y la app sigue (antes aparecía el diálogo de error y se cerraba).
+process.on('uncaughtException', (e) => console.error('[agentik] error no capturado:', e instanceof Error ? e.stack ?? e.message : e));
+process.on('unhandledRejection', (e) => console.error('[agentik] promesa rechazada:', e instanceof Error ? e.message : e));
 let secrets: SecretStore;
 let pendingReply = false; // hay una respuesta sin leer: el personaje salta hasta que abras el chat
 
@@ -70,8 +75,8 @@ function uniqueModelId(label: string): string {
 }
 
 // ── Ajustes (avatar, avisos, sonido) ───────────────────────────────────────────────────────
-function settingsState(): { avatar: Config['avatar']; notifications: boolean; sounds: boolean } {
-  return { avatar: config.avatar, notifications: config.notifications, sounds: config.sounds };
+function settingsState(): { avatar: Config['avatar']; notifications: boolean; sounds: boolean; onboarding_done: boolean } {
+  return { avatar: config.avatar, notifications: config.notifications, sounds: config.sounds, onboarding_done: config.onboarding_done };
 }
 
 function handleSettingsSet(p: Partial<ReturnType<typeof settingsState>>): unknown {
@@ -79,6 +84,7 @@ function handleSettingsSet(p: Partial<ReturnType<typeof settingsState>>): unknow
   if (p.avatar !== undefined) config.avatar = p.avatar;
   if (p.notifications !== undefined) config.notifications = p.notifications;
   if (p.sounds !== undefined) config.sounds = p.sounds;
+  if (p.onboarding_done !== undefined) config.onboarding_done = p.onboarding_done;
   saveConfig(config);
   if (avatarChanged) character?.webContents.send(IPC.avatarChanged, config.avatar); // cambia sin reiniciar
   return settingsState();
@@ -127,17 +133,31 @@ async function handleModelsDetect(baseUrl?: string): Promise<unknown> {
 const SUGGESTION_POLL_MS = 30_000;
 
 function restartFileWatcher(): void {
-  fileWatcher?.close();
-  fileWatcher = startFileWatcher(config.allowed_folders, (p) => observer.recordFileChange(p));
+  try {
+    void fileWatcher?.close();
+    fileWatcher = startFileWatcher(config.allowed_folders, (p) => observer.recordFileChange(p));
+  } catch (e) {
+    fileWatcher = null;
+    console.warn('[agentik] no pude iniciar el vigilante:', e instanceof Error ? e.message : e);
+  }
 }
 
 async function handleAddFolder(): Promise<string[]> {
   const result = await dialog.showOpenDialog({ properties: ['openDirectory', 'multiSelections'] });
   if (result.canceled || result.filePaths.length === 0) return config.allowed_folders;
+  const rejected: string[] = [];
   for (const folder of result.filePaths) {
-    if (!config.allowed_folders.includes(folder)) {
-      config.allowed_folders.push(folder);
-    }
+    const reason = broadFolderReason(folder);
+    if (reason) rejected.push(`• ${folder}: ${reason}`);
+    else if (!config.allowed_folders.includes(folder)) config.allowed_folders.push(folder);
+  }
+  if (rejected.length) {
+    void dialog.showMessageBox({
+      type: 'warning',
+      title: 'Carpeta demasiado amplia',
+      message: 'No agregué esa carpeta',
+      detail: `${rejected.join('\n')}\n\nAutorizar una carpeta le da a Agentik permiso para leer, mover y escribir ahí, y para vigilar todo lo que cambie. Elige una carpeta concreta, como Descargas, Documentos o la de un proyecto.`,
+    });
   }
   saveConfig(config);
   restartFileWatcher();
@@ -473,6 +493,12 @@ app.whenReady().then(() => {
   app.dock?.hide();
 
   config = loadUserConfig(app.getPath('userData'), join(app.getAppPath(), 'config.json'));
+  // Una carpeta demasiado amplia ya guardada (p. ej. "/" por un clic accidental) se quita antes de vigilar nada.
+  const cleaned = sanitizeFolders(config.allowed_folders);
+  if (cleaned.removed.length) {
+    config.allowed_folders = cleaned.kept;
+    saveConfig(config);
+  }
   db = openDb(join(app.getPath('userData'), 'agetik.db'));
   backupDir = join(app.getPath('userData'), 'backups');
   observer = new Observer(db, config, readActiveWindow, pushStatus);
@@ -493,6 +519,14 @@ app.whenReady().then(() => {
   if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: config.launch_at_login });
 
   createWindows();
+  if (cleaned.removed.length) {
+    void dialog.showMessageBox({
+      type: 'warning',
+      title: 'Quité una carpeta demasiado amplia',
+      message: 'Agentik quitó carpetas autorizadas que eran peligrosas',
+      detail: `${cleaned.removed.map((r) => `• ${r.path}: ${r.reason}`).join('\n')}\n\nPuedes agregar carpetas concretas en la pestaña Archivos.`,
+    });
+  }
 
   registerIpc({
     getStatus: () => observer.status(),
@@ -546,6 +580,7 @@ app.whenReady().then(() => {
   fileWatcher = startFileWatcher(config.allowed_folders, (p) => observer.recordFileChange(p));
 
   registerShortcuts();
+  if (!config.onboarding_done) setTimeout(showBubble, 1500); // primera vez: abre la burbuja para mostrar la guía de inicio
   // Aprende de fondo solo si ya activaste el observador (sin tu activación no se observa nada).
   const autoLearn = (): void => { if (observer.status().enabled) void runLearning(); };
   setTimeout(autoLearn, 30_000);

@@ -43,6 +43,7 @@ const schema = z.object({
   launch_at_login: z.boolean().default(true),
   notifications: z.boolean().default(true),
   sounds: z.boolean().default(true),
+  onboarding_done: z.boolean().default(false),
   avatar: z.enum(['nino', 'nina']).default('nino'),
   habit_retention_days: z.number().int().min(7).max(365).default(60),
   models: z.array(profileSchema).default(DEFAULT_MODELS), // vacía es válido: el usuario puede quitarlos todos

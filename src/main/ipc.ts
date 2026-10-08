@@ -9,7 +9,7 @@ const chatMsg = z.string().min(1).max(4000);
 const memId = z.number().int().positive();
 
 const modelSave = profileSchema.partial({ id: true }).extend({ api_key: z.string().max(500).optional() });
-const settingsPatch = z.object({ avatar: z.enum(['nino', 'nina']).optional(), notifications: z.boolean().optional(), sounds: z.boolean().optional() });
+const settingsPatch = z.object({ avatar: z.enum(['nino', 'nina']).optional(), notifications: z.boolean().optional(), sounds: z.boolean().optional(), onboarding_done: z.boolean().optional() });
 const modelId = z.string().min(1).max(60);
 
 const suggestionId = z.string().min(1).max(100);

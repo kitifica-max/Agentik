@@ -11,6 +11,7 @@
     <header class="header">
       <span id="status" class="status-text">Reposo</span>
       <div class="header-actions">
+        <button id="guide-open" class="btn btn-sm" type="button" title="Guía de inicio">?</button>
         <button id="toggle" class="btn btn-sm" type="button">Activar</button>
         <button id="pause" class="btn btn-sm" type="button" hidden>Pausar</button>
       </div>
@@ -125,7 +126,20 @@
       <label class="setting"><input id="set-notif" type="checkbox" /> <span>Notificación de macOS cuando algo termine o falle</span></label>
       <label class="setting"><input id="set-sound" type="checkbox" /> <span>Sonido "pop" y salto del personaje cuando haya una respuesta pendiente</span></label>
       <div><button id="set-test" class="btn btn-sm" type="button">Probar el "pop"</button></div>
+      <div class="section-divider"></div>
+      <div class="folders-header"><span class="folders-title">Guía de inicio</span></div>
+      <div><button id="set-guide" class="btn btn-sm" type="button">Ver la guía otra vez</button></div>
       <p class="credits">Ilustraciones de los avatares: Designed by Freepik</p>
+    </section>
+
+    <section id="view-guide" class="view view-models" hidden>
+      <div id="guide-body" class="guide-body"></div>
+      <div class="guide-nav">
+        <button id="guide-skip" class="btn btn-sm" type="button">Saltar</button>
+        <span id="guide-dots" class="guide-dots"></span>
+        <button id="guide-back" class="btn btn-sm" type="button">Atrás</button>
+        <button id="guide-next" class="btn btn-sm btn-ok" type="button">Siguiente</button>
+      </div>
     </section>
 
     <footer class="footer">
@@ -138,6 +152,7 @@
   <script src="avatar-engine.js"></script>
   <script src="avatars.js"></script>
   <script src="sounds.js"></script>
+  <script src="onboarding.js"></script>
   <script src="bubble.js"></script>
 </body>
 </html>

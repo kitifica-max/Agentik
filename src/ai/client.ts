@@ -1,5 +1,6 @@
 import { readdirSync, statSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
+import { isWithin, broadFolderReason } from '../shared/paths.js';
 import type { Db } from '../db/db.js';
 import type { Config, ChatMessage, Memory, ModelProfile } from '../shared/types.js';
 import type { Provider, ToolDef, Msg, Block, LlmResult } from './providers.js';
@@ -214,7 +215,7 @@ function allowedFoldersListing(config: Config): string {
 
 function isInsideAllowed(config: Config, filePath: string): boolean {
   const abs = resolve(filePath);
-  return config.allowed_folders.some(f => abs.startsWith(resolve(f)));
+  return config.allowed_folders.some((f) => isAbsolute(f) && !broadFolderReason(f) && isWithin(f, abs));
 }
 
 export interface ChatResult {

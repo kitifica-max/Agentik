@@ -27,6 +27,7 @@
   "launch_at_login": true,
   "notifications": true,
   "sounds": true,
+  "onboarding_done": false,
   "avatar": "nino",
   "habit_retention_days": 60,
   "models": [

@@ -62,6 +62,7 @@ export interface Config {
   launch_at_login: boolean;
   notifications: boolean;
   sounds: boolean;
+  onboarding_done: boolean;
   avatar: 'nino' | 'nina';
   habit_retention_days: number;
   models: ModelProfile[];
