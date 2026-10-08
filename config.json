@@ -1,0 +1,27 @@
+{
+  "allowed_folders": [],
+  "excluded_apps": [
+    "Bitwarden",
+    "1Password",
+    "Keychain Access",
+    "Wallet"
+  ],
+  "excluded_title_patterns": [
+    "banco",
+    "bancaria",
+    "contraseña",
+    "password",
+    "login",
+    "bitwarden",
+    "1password",
+    "keychain",
+    "salud",
+    "médico",
+    "wallet"
+  ],
+  "retention_hours": 24,
+  "suggestion_level": "discreto",
+  "memory_enabled": true,
+  "memory_max_items_per_request": 5,
+  "observer_poll_ms": 5000
+}

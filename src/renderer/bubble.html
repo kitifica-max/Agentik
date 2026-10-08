@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'" />
+  <title>Agetik</title>
+  <link rel="stylesheet" href="styles/bubble.css" />
+</head>
+<body>
+  <main class="bubble">
+    <header>
+      <strong>Agetik</strong>
+      <span id="status" class="status">Reposo</span>
+    </header>
+
+    <p id="hint" class="hint">Observador apagado. Actívalo para empezar a registrar tu actividad.</p>
+    <p id="perm" class="warn" hidden>
+      Falta permiso de Accesibilidad. Ajustes del Sistema → Privacidad y seguridad → Accesibilidad → activa Agetik. Sin él solo veo el nombre de la app.
+    </p>
+
+    <div class="row">
+      <button id="toggle" class="primary" type="button">Activar observador</button>
+      <button id="pause" type="button" hidden>Pausar</button>
+    </div>
+
+    <footer>
+      <span>Cmd+Shift+P pausa</span>
+      <button id="quit" class="link" type="button">Salir</button>
+    </footer>
+  </main>
+  <script src="bubble.js"></script>
+</body>
+</html>

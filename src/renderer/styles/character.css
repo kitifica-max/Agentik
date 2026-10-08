@@ -1,0 +1,333 @@
+:root {
+  --ink: #1e1e1e;
+  --paper: #e6e6e6;
+  --accent: #f2b84b;
+  --alert: #e5484d;
+  --muted: #8a8a8a;
+}
+
+html,
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+.agent {
+  position: relative;
+  width: 150px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.body {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  transform-origin: 50% 90%;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* Parches: mismo color que el fondo del avatar. */
+.patch {
+  fill: var(--paper);
+}
+
+.brow,
+.mouth,
+.eye {
+  fill: none;
+  stroke: var(--ink);
+  stroke-linecap: round;
+  stroke-width: 1.4;
+  transition: d 0.35s ease, transform 0.35s ease;
+}
+
+.brow {
+  transition: transform 0.35s ease;
+}
+
+.eye {
+  fill: var(--ink);
+  stroke-width: 0.6;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: blink 5.5s infinite;
+}
+
+.eyes {
+  transition: transform 0.35s ease;
+}
+
+.indicator,
+.badge {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Indicador de observación: visible mientras el observador está activo. */
+.indicator {
+  top: 10px;
+  right: 14px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--alert);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.agent[data-observing="true"] .indicator {
+  opacity: 1;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+/* Insignia de estado: texto corto según lo que hace. */
+.badge {
+  top: 6px;
+  left: 14px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font: 700 13px/22px -apple-system, system-ui, sans-serif;
+  text-align: center;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.badge.show {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.badge[data-kind="con-sugerencia"] {
+  background: var(--accent);
+}
+
+.badge[data-kind="esperando-aprobacion"] {
+  background: var(--accent);
+}
+
+.badge[data-kind="pausado"] {
+  background: var(--muted);
+  color: #fff;
+}
+
+/* ---------- Estados ---------- */
+
+/* Reposo: respira despacio, ojos normales. */
+[data-state="reposo"] .body {
+  animation: breathe 3.6s ease-in-out infinite;
+}
+
+/* Observando: se inclina y mira de lado a lado (atento, curioso). */
+[data-state="observando"] .body {
+  animation: sway 4.2s ease-in-out infinite;
+}
+
+[data-state="observando"] .eyes {
+  animation: look 4.2s ease-in-out infinite;
+}
+
+/* Pensando: cabeza ladeada, ojos arriba, una ceja alzada, boca ondulada. */
+[data-state="pensando"] .body {
+  transform: rotate(-8deg);
+  animation: ponder 2.6s ease-in-out infinite;
+}
+
+[data-state="pensando"] .eyes {
+  transform: translateY(-1.2px);
+}
+
+[data-state="pensando"] .brow-r {
+  transform: translateY(-1.8px);
+}
+
+[data-state="pensando"] .mouth {
+  d: path("M82.2 87.4 Q83.6 85.6 85 87.4 T87.8 87.4");
+}
+
+/* Con sugerencia: sonrisa, ojos felices, rebote alegre. */
+[data-state="con-sugerencia"] .body {
+  animation: bounce 0.9s ease-in-out infinite alternate;
+}
+
+[data-state="con-sugerencia"] .eye-l {
+  d: path("M65.6 69.4 Q69.3 64.8 73 69.4");
+  fill: none;
+  stroke-width: 1.6;
+}
+
+[data-state="con-sugerencia"] .eye-r {
+  d: path("M94.2 69.4 Q97.9 64.8 101.6 69.4");
+  fill: none;
+  stroke-width: 1.6;
+}
+
+[data-state="con-sugerencia"] .mouth {
+  d: path("M81.2 86 Q85.3 90.6 89.4 86");
+}
+
+/* Esperando aprobación: ojos abiertos, cejas arriba, boca en "o", se mueve para llamar la atención. */
+[data-state="esperando-aprobacion"] .body {
+  animation: wiggle 0.45s ease-in-out infinite alternate;
+}
+
+[data-state="esperando-aprobacion"] .eye-l {
+  d: path("M65.6 68 Q69.3 62.8 73 68 Q69.3 73.2 65.6 68Z");
+}
+
+[data-state="esperando-aprobacion"] .eye-r {
+  d: path("M94.2 68 Q97.9 62.8 101.6 68 Q97.9 73.2 94.2 68Z");
+}
+
+[data-state="esperando-aprobacion"] .brow {
+  transform: translateY(-1.5px);
+}
+
+[data-state="esperando-aprobacion"] .mouth {
+  d: path("M84.2 87 a1.2 1.4 0 1 0 2.4 0 a1.2 1.4 0 1 0 -2.4 0");
+}
+
+/* Pausado: ojos cerrados, boca plana, apagado. */
+[data-state="pausado"] .body {
+  opacity: 0.55;
+  transform: translateY(4px);
+}
+
+[data-state="pausado"] .eye-l {
+  d: path("M65.9 68.6 Q69.3 71.6 72.7 68.6");
+  fill: none;
+  stroke-width: 1.5;
+  animation: none;
+}
+
+[data-state="pausado"] .eye-r {
+  d: path("M94.5 68.6 Q97.9 71.6 101.3 68.6");
+  fill: none;
+  stroke-width: 1.5;
+  animation: none;
+}
+
+[data-state="pausado"] .mouth {
+  d: path("M82.8 87.8 H87.8");
+}
+
+/* ---------- Keyframes ---------- */
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes sway {
+  0%,
+  100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+@keyframes look {
+  0%,
+  100% {
+    transform: translateX(-1.6px);
+  }
+  50% {
+    transform: translateX(1.6px);
+  }
+}
+
+@keyframes ponder {
+  0%,
+  100% {
+    transform: rotate(-8deg);
+  }
+  50% {
+    transform: rotate(-5deg);
+  }
+}
+
+@keyframes bounce {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes wiggle {
+  from {
+    transform: rotate(-4deg);
+  }
+  to {
+    transform: rotate(4deg);
+  }
+}
+
+@keyframes blink {
+  0%,
+  94%,
+  100% {
+    transform: scaleY(1);
+  }
+  97% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

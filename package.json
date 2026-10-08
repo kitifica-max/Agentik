@@ -1,0 +1,55 @@
+{
+  "name": "agetik",
+  "version": "0.1.0",
+  "description": "Agetik: agente personal de escritorio para macOS",
+  "private": true,
+  "main": "dist/main/index.js",
+  "scripts": {
+    "build:ts": "tsc -p tsconfig.json && node scripts/copy-assets.mjs",
+    "dev": "npm run build:ts && electron .",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "npm run build:ts && electron-builder --mac dmg",
+    "predev": "electron-rebuild -f -w better-sqlite3",
+    "pretest": "npm rebuild better-sqlite3"
+  },
+  "build": {
+    "appId": "com.agetik.app",
+    "productName": "Agetik",
+    "files": [
+      "dist/**/*",
+      "config.json",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "extendInfo": {
+        "LSUIElement": true
+      }
+    }
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "chokidar": "^5.0.0",
+    "dotenv": "^18.0.6",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.2.1",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.6.4",
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}
