@@ -33,6 +33,7 @@
       <div id="messages" class="messages"></div>
       <div id="thinking" class="thinking" hidden>
         <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <button id="chat-stop" class="btn btn-xs btn-danger" type="button" title="Detener (Esc)">Detener</button>
       </div>
       <div id="memory-proposal" class="memory-proposal" hidden>
         <p id="proposal-text"></p>
@@ -45,6 +46,9 @@
           <button id="suggestion-accept" class="btn btn-sm btn-ok" type="button">Abrir chat</button>
           <button id="suggestion-dismiss" class="btn btn-sm" type="button">Descartar</button>
         </div>
+      </div>
+      <div id="chat-tools" class="chat-tools" hidden>
+        <button id="chat-clear" class="btn btn-xs" type="button" title="Borra el historial del chat de tu Mac">Borrar historial</button>
       </div>
       <form id="chat-form" class="chat-form">
         <input id="chat-input" type="text" placeholder="Escribe algo…" autocomplete="off" maxlength="4000" />
@@ -112,6 +116,10 @@
     <section id="view-settings" class="view view-models" hidden>
       <div class="folders-header"><span class="folders-title">Avatar</span></div>
       <div id="avatar-choices" class="avatar-choices"></div>
+      <div class="section-divider"></div>
+      <div class="folders-header"><span class="folders-title">Historial del chat</span></div>
+      <p class="muted">El chat se guarda solo en tu Mac (hasta 500 mensajes) para que sigas donde lo dejaste.</p>
+      <div><button id="set-clear" class="btn btn-sm btn-danger" type="button">Borrar historial del chat</button></div>
       <div class="section-divider"></div>
       <div class="folders-header"><span class="folders-title">Avisos y sonido</span></div>
       <label class="setting"><input id="set-notif" type="checkbox" /> <span>Notificación de macOS cuando algo termine o falle</span></label>

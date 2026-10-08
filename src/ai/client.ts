@@ -2,7 +2,7 @@ import { readdirSync, statSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Db } from '../db/db.js';
 import type { Config, ChatMessage, Memory, ModelProfile } from '../shared/types.js';
-import type { Provider, ToolDef, Msg, Block } from './providers.js';
+import type { Provider, ToolDef, Msg, Block, LlmResult } from './providers.js';
 import { recentEventsSummary } from './eventSummary.js';
 import { approvedMemoriesForContext } from '../memory/memory.js';
 import { isSensitiveText } from '../memory/filters.js';
@@ -219,6 +219,7 @@ function isInsideAllowed(config: Config, filePath: string): boolean {
 
 export interface ChatResult {
   reply: string;
+  stopped?: boolean; // el usuario pulsó Detener
   proposedMemory?: { tipo: string; contenido: string };
   opsExecuted: number;
 }
@@ -238,7 +239,12 @@ export class AiClient {
     this.sessionHistory = [];
   }
 
-  private async executeTool(name: string, input: Record<string, unknown>): Promise<{ success: boolean; message: string; ops?: number }> {
+  /** Recupera el contexto guardado al reabrir la app (solo texto que ya pasó por el modelo). */
+  loadHistory(messages: ChatMessage[]): void {
+    this.sessionHistory = messages.slice(-30);
+  }
+
+  private async executeTool(name: string, input: Record<string, unknown>, signal?: AbortSignal): Promise<{ success: boolean; message: string; ops?: number }> {
     const op = (r: { success: boolean; message: string }) => ({ ...r, ops: r.success ? 1 : 0 });
     switch (name) {
       case 'create_folder':
@@ -265,10 +271,10 @@ export class AiClient {
         }
         const cwd = typeof input.cwd === 'string' && input.cwd ? resolve(input.cwd) : (this.config.allowed_folders[0] ? resolve(this.config.allowed_folders[0]) : homedir());
         const secs = Math.min(Math.max(Number(input.timeout_seconds) || 120, 1), 600);
-        const r = await runCommand(cmd, { cwd, timeoutMs: secs * 1000 });
+        const r = await runCommand(cmd, { cwd, timeoutMs: secs * 1000, signal });
         logAudit(this.db, 'shell_run', `${cmd.slice(0, 500)} (exit ${r.code}${r.timedOut ? ', timeout' : ''})`);
         const head = r.timedOut ? `TIMEOUT tras ${secs}s.\n` : `exit ${r.code}\n`;
-        return { success: r.code === 0 && !r.timedOut, message: head + (r.output || '(sin salida)'), ops: r.code === 0 ? 1 : 0 };
+        return { success: r.code === 0 && !r.timedOut && !r.aborted, message: (r.aborted ? 'DETENIDO por el usuario.\n' : head) + (r.output || '(sin salida)'), ops: r.code === 0 ? 1 : 0 };
       }
       case 'move_files': {
         const moves = Array.isArray(input.moves) ? input.moves.slice(0, 100) as { source?: string; destination?: string }[] : [];
@@ -308,7 +314,7 @@ export class AiClient {
     }
   }
 
-  async chat(userMessage: string): Promise<ChatResult> {
+  async chat(userMessage: string, signal?: AbortSignal): Promise<ChatResult> {
     const contextParts: string[] = [];
 
     const eventSummary = recentEventsSummary(this.db);
@@ -342,8 +348,16 @@ export class AiClient {
     let proposedMemory: { tipo: string; contenido: string } | undefined;
 
     let hitLimit = true;
+    let stopped = false; // el usuario pulsó "Detener"
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      const res = await provider.chat({ system, tools: TOOLS, messages: apiMessages, maxTokens: MAX_TOKENS });
+      if (signal?.aborted) { stopped = true; break; }
+      let res: LlmResult;
+      try {
+        res = await provider.chat({ system, tools: TOOLS, messages: apiMessages, maxTokens: MAX_TOKENS, signal });
+      } catch (e) {
+        if (signal?.aborted) { stopped = true; break; } // cortar la llamada lanza un error: no es un fallo
+        throw e;
+      }
       recordUsage(this.db, profile.model, res.usage, price);
       replyText = res.text;
 
@@ -353,6 +367,7 @@ export class AiClient {
 
       const toolResults: Block[] = [];
       for (const tu of res.toolCalls) {
+        if (signal?.aborted) { stopped = true; break; } // no arranca más herramientas
         const input = (tu.input ?? {}) as Record<string, unknown>;
 
         if (tu.name === 'remember_memory') {
@@ -366,7 +381,7 @@ export class AiClient {
 
         let result: { success: boolean; message: string; ops?: number };
         try {
-          result = await this.executeTool(tu.name, input);
+          result = await this.executeTool(tu.name, input, signal);
         } catch (e) {
           result = { success: false, message: `Error interno: ${e instanceof Error ? e.message : String(e)}` };
         }
@@ -381,7 +396,14 @@ export class AiClient {
         });
       }
 
+      if (stopped || signal?.aborted) { stopped = true; break; }
       apiMessages.push({ role: 'user', content: toolResults });
+    }
+
+    if (stopped) {
+      const reply = `Detenido.${opsExecuted > 0 ? ` Alcancé a ejecutar ${opsExecuted} ${opsExecuted === 1 ? 'operación' : 'operaciones'} antes de parar.` : ''}`;
+      this.sessionHistory.push({ role: 'assistant', content: reply }); // el historial sigue alternando usuario/asistente
+      return { reply, proposedMemory, opsExecuted, stopped: true };
     }
 
     if (hitLimit) replyText += `\n(Llegué al límite de ${MAX_TOOL_ROUNDS} rondas; pídeme continuar.)`;

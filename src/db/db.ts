@@ -63,6 +63,14 @@ CREATE TABLE IF NOT EXISTS habit_stats (
   PRIMARY KEY (day, hour, app)
 );
 
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id      INTEGER PRIMARY KEY,
+  ts      INTEGER NOT NULL,
+  role    TEXT NOT NULL CHECK (role IN ('user','assistant')),
+  content TEXT NOT NULL,
+  kind    TEXT NOT NULL DEFAULT 'ai' CHECK (kind IN ('ai','local','error','stopped'))
+);
+
 CREATE TABLE IF NOT EXISTS app_state (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL

@@ -12,7 +12,7 @@ export type Block =
 export interface Msg { role: 'user' | 'assistant'; content: string | Block[] }
 export interface ToolCall { id: string; name: string; input: Record<string, unknown> }
 
-export interface ChatRequest { system: string; tools: ToolDef[]; messages: Msg[]; maxTokens: number }
+export interface ChatRequest { system: string; tools: ToolDef[]; messages: Msg[]; maxTokens: number; signal?: AbortSignal }
 export interface LlmResult {
   text: string;
   toolCalls: ToolCall[];
@@ -28,12 +28,12 @@ const REQUEST_TIMEOUT_MS = 10 * 60_000; // los modelos locales pueden tardar
 const stripThink = (s: string): string => s.replace(/<think>[\s\S]*?<\/think>/g, '').trim(); // razonamiento en línea (qwen3, deepseek...)
 const trimUrl = (u: string): string => u.replace(/\/+$/, '');
 
-async function postJson(fetchImpl: FetchLike, url: string, headers: Record<string, string>, body: unknown): Promise<any> {
+async function postJson(fetchImpl: FetchLike, url: string, headers: Record<string, string>, body: unknown, signal?: AbortSignal): Promise<any> {
   const res = await fetchImpl(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...headers },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)]) : AbortSignal.timeout(REQUEST_TIMEOUT_MS), // "Detener" corta la petición
   });
   const raw = await res.text();
   if (!res.ok) throw new HttpError(res.status, raw);
@@ -60,7 +60,7 @@ export class AnthropicProvider implements Provider {
       system: req.system,
       tools: req.tools as Anthropic.Tool[],
       messages: req.messages as Anthropic.MessageParam[],
-    });
+    }, req.signal ? { signal: req.signal } : undefined);
     let text = '';
     const toolCalls: ToolCall[] = [];
     for (const b of res.content) {
@@ -106,7 +106,7 @@ export class OpenAiProvider implements Provider {
         max_tokens: req.maxTokens,
         messages: toOpenAiMessages(req.system, req.messages),
         tools: req.tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.input_schema } })),
-      });
+      }, req.signal);
     const choice = data.choices?.[0];
     const msg = choice?.message ?? {};
     const toolCalls: ToolCall[] = (msg.tool_calls ?? []).map((c: any, i: number) => ({
@@ -179,7 +179,7 @@ export class OllamaProvider implements Provider {
         messages: toOllamaMessages(req.system, req.messages),
         tools: req.tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.input_schema } })),
         options: { num_ctx: this.p.num_ctx ?? 8192, num_predict: req.maxTokens },
-      });
+      }, req.signal);
     } catch (e) {
       if (e instanceof HttpError && e.status === 400 && /tools/i.test(e.body)) {
         throw new Error(`El modelo "${this.p.model}" no soporta herramientas, y Agentik las necesita. Prueba con uno que sí (qwen3, llama3.1, mistral-nemo...).`);

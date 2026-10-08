@@ -38,6 +38,9 @@ export const IPC = {
   modelsSave: 'models:save',
   modelsDelete: 'models:delete',
   modelsDetect: 'models:detect',
+  chatStop: 'chat:stop',
+  chatHistory: 'chat:history',
+  chatClearHistory: 'chat:clear-history',
   settingsGet: 'settings:get',
   settingsSet: 'settings:set',
   avatarChanged: 'avatar:changed',
@@ -51,6 +54,7 @@ export const INVOKE_CHANNELS: string[] = [
   IPC.configGetFolders, IPC.configAddFolder, IPC.configRemoveFolder, IPC.usageGet,
   IPC.modelsList, IPC.modelsSetActive, IPC.modelsSave, IPC.modelsDelete, IPC.modelsDetect,
   IPC.settingsGet, IPC.settingsSet,
+  IPC.chatStop, IPC.chatHistory, IPC.chatClearHistory,
 ];
 export const SEND_CHANNELS: string[] = [IPC.bubbleToggle, IPC.windowMoveBy, IPC.windowDragEnd, IPC.appQuit];
 export const LISTEN_CHANNELS: string[] = [IPC.characterState, IPC.observerChanged, IPC.chatReply, IPC.chatThinking, IPC.chatClear, IPC.memoryProposed, IPC.memoryRefresh, IPC.avatarChanged, IPC.suggestionShow, IPC.fileEditProposed];

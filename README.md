@@ -41,6 +41,10 @@ Haz clic en el personaje para abrir la burbuja. Escribe un mensaje y Agentik res
 
 Si le pides que recuerde algo, propone un recuerdo. Solo se guarda si lo apruebas. Datos sensibles (contraseñas, bancarios, salud, API keys) nunca se proponen como recuerdo.
 
+- **El historial se guarda:** si cierras y vuelves a abrir la app, el chat sigue donde lo dejaste (hasta 500 mensajes) y el modelo retoma el hilo.
+- **Detener:** mientras Agentik trabaja aparece **Detener** (o pulsa **Esc**). Corta la llamada al modelo y mata el comando que esté corriendo; lo que ya se alcanzó a hacer queda hecho y te lo dice.
+- **Borrar historial:** botón en el chat y en Ajustes (también el atajo de "chat nuevo"). Se elimina de verdad del disco, sin dejar copias en el archivo de la base de datos.
+
 ## Memoria
 
 La pestaña **Memoria** en la burbuja muestra todos los recuerdos: propuestos, aprobados y rechazados. Puedes aprobar, rechazar o eliminar desde ahí. Un recuerdo eliminado desaparece sin dejar copias.
@@ -155,6 +159,7 @@ En la pestaña **Modelo** eliges con qué modelo trabaja Agentik (el cambio apli
 - App en primer plano y título de la ventana activa.
 - Duración de uso por app.
 - Cambios de archivos dentro de las carpetas autorizadas (nombre y ruta, no contenido).
+- Historial del chat: tus mensajes y las respuestas, hasta 500, solo en tu Mac y hasta que los borres. Si pegas una clave por error, no se guarda (queda `[clave oculta]`).
 - Resumen de hábitos: tiempo de uso por **día, hora y app** (sin títulos de ventana), solo de lo que no está excluido. Sirve para proponerte recuerdos como "suele estar más activo de 9 a 13".
 
 **Qué no se registra nunca**
@@ -174,6 +179,7 @@ En la pestaña **Modelo** eliges con qué modelo trabaja Agentik (el cambio apli
 
 **Cuánto dura**
 - Eventos de actividad: 24 horas por defecto (`retention_hours` en `config.json`). Una tarea horaria borra lo vencido.
+- Historial del chat: los últimos 500 mensajes, hasta que pulses **Borrar historial**.
 - Resumen de hábitos: 60 días por defecto (`habit_retention_days`, de 7 a 365).
 
 **Cómo borrarlo**

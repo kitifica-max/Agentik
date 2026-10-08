@@ -534,3 +534,8 @@ html, body {
 .setting input { margin-top: 2px; }
 
 .credits { margin: auto 0 0; padding-top: 12px; color: var(--muted); font-size: 11px; }
+
+/* Detener y borrar historial */
+.thinking { align-items: center; }
+.thinking .btn { margin-left: 6px; }
+.chat-tools { display: flex; justify-content: flex-end; }

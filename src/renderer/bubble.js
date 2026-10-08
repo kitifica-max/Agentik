@@ -70,7 +70,11 @@
     pause.textContent = s.paused ? 'Reanudar' : 'Pausar';
   }
 
+  var chatTools = document.getElementById('chat-tools');
+  var chatStop = document.getElementById('chat-stop');
+
   function addMessage(role, text) {
+    chatTools.hidden = false; // hay historial: se puede borrar
     var div = document.createElement('div');
     div.className = 'msg msg-' + role;
     div.textContent = text;
@@ -593,6 +597,33 @@
     }
   });
 
+  // Detener lo que Agentik esté haciendo (también con Esc)
+  function stopNow() {
+    chatStop.disabled = true;
+    api.invoke(ch.chatStop).then(function () { chatStop.disabled = false; });
+  }
+  chatStop.addEventListener('click', stopNow);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !thinking.hidden) stopNow();
+  });
+
+  // Borrar el historial (del chat y del disco)
+  function clearHistory() {
+    if (!window.confirm('¿Borrar todo el historial del chat? Se elimina de tu Mac y no se puede deshacer.')) return;
+    api.invoke(ch.chatClearHistory).then(function () {
+      messages.innerHTML = '';
+      chatTools.hidden = true;
+      showToast('Historial borrado');
+    });
+  }
+  document.getElementById('chat-clear').addEventListener('click', clearHistory);
+  document.getElementById('set-clear').addEventListener('click', clearHistory);
+
+  // Al abrir la app, vuelve el historial guardado
+  api.invoke(ch.chatHistory).then(function (rows) {
+    (rows || []).forEach(function (m) { addMessage(m.role, m.content); });
+  });
+
   // Thinking indicator
   api.on(ch.chatThinking, function (on) {
     thinking.hidden = !on;
@@ -604,7 +635,7 @@
 
   // Mensajes locales (resumen) y chat nuevo desde atajos
   api.on(ch.chatReply, function (text) { showTab('chat'); addMessage('assistant', text); });
-  api.on(ch.chatClear, function () { messages.innerHTML = ''; showTab('chat'); });
+  api.on(ch.chatClear, function () { messages.innerHTML = ''; chatTools.hidden = true; showTab('chat'); });
 
   // File edit proposed from AI
   api.on(ch.fileEditProposed, function (edit) {

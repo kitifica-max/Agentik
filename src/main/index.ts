@@ -14,6 +14,8 @@ import { createProvider, listOllamaModels } from '../ai/providers.js';
 import { SecretStore } from './secrets.js';
 import { notificationBody, shouldNotify } from './notify.js';
 import { learn, MIN_HABIT_DAYS } from '../memory/insights.js';
+import { abortable } from '../chat/abort.js';
+import { saveExchange, loadHistory, modelContext, clearHistory, type ChatKind } from '../chat/history.js';
 import { proposeMemory, approveMemory, rejectMemory, deleteMemory, listMemories } from '../memory/memory.js';
 import { SuggestionEngine, type Suggestion } from '../suggestions/engine.js';
 import { dailySummary } from '../summary/daily.js';
@@ -280,17 +282,53 @@ async function localCommand(msg: string): Promise<string | null> {
   return null;
 }
 
-async function handleChat(msg: string): Promise<{ reply: string }> {
+// Una sola tarea a la vez: "Detener" la corta. historyEpoch invalida el guardado de lo que estaba en curso
+// si en medio se borró el historial (así no reaparece nada de lo borrado).
+let chatAbort: AbortController | null = null;
+let historyEpoch = 0;
+
+function stopChat(): boolean {
+  const running = chatAbort !== null;
+  chatAbort?.abort();
+  return running;
+}
+
+/** Borra el historial por completo (y corta lo que esté en curso). */
+function wipeChat(): number {
+  stopChat();
+  historyEpoch++;
+  ai.clearSession();
+  return clearHistory(db);
+}
+
+async function handleChat(msg: string, opts: { asAssistant?: boolean } = {}): Promise<{ reply: string; stopped?: boolean }> {
   let flash: CharacterState | null = null; // reacción breve del personaje al terminar
   let notice: { title: string; body: string } | null = null; // aviso nativo si no estás mirando la burbuja
+  let record: { reply: string; kind: ChatKind } | null = null; // lo que queda en el historial
+  const epoch = historyEpoch;
+  const ctrl = new AbortController();
+  const signal = ctrl.signal;
+  chatAbort = ctrl;
   setCharacterState('pensando');
   bubble?.webContents.send(IPC.chatThinking, true);
 
   try {
-    const local = await localCommand(msg);
-    if (local !== null) { notice = { title: 'Agentik', body: local }; return { reply: local }; }
+    let local: string | null;
+    try {
+      // "limpia" borra archivos: no se deja a medias con un Detener que solo aparenta parar
+      local = CLEAN_RE.test(msg) ? await localCommand(msg) : await abortable(localCommand(msg), signal);
+    } catch (e) {
+      if (signal.aborted) { record = { reply: 'Detenido.', kind: 'stopped' }; return { reply: 'Detenido.', stopped: true }; }
+      throw e;
+    }
+    if (local !== null) { record = { reply: local, kind: 'local' }; notice = { title: 'Agentik', body: local }; return { reply: local }; }
 
-    const result = await ai.chat(msg);
+    const result = await ai.chat(msg, signal);
+
+    if (result.stopped) {
+      record = { reply: result.reply, kind: 'stopped' };
+      return { reply: result.reply, stopped: true }; // sin aviso ni reacción: tú lo pediste
+    }
 
     if (result.proposedMemory) {
       const tipo = VALID_TIPOS.includes(result.proposedMemory.tipo as MemoryTipo)
@@ -309,13 +347,21 @@ async function handleChat(msg: string): Promise<{ reply: string }> {
       showToastInBubble(`${result.opsExecuted} operaciones ejecutadas`);
     }
 
+    record = { reply: result.reply, kind: 'ai' };
     return { reply: result.reply };
   } catch (err: unknown) {
     flash = 'confuso';
     const message = err instanceof Error ? err.message : 'Error desconocido';
     notice = { title: 'Agentik: algo falló', body: message };
+    record = { reply: `Error: ${message}`, kind: 'error' };
     return { reply: `Error: ${message}` };
   } finally {
+    chatAbort = null;
+    if (record && epoch === historyEpoch) {
+      // una sugerencia aceptada se ve como mensaje del asistente, no como algo que escribiste
+      if (opts.asAssistant) { saveExchange(db, null, msg, record.kind); saveExchange(db, null, record.reply, record.kind); }
+      else saveExchange(db, msg, record.reply, record.kind);
+    }
     // Si la respuesta llega y no estás mirando la burbuja: queda pendiente (pop + salto) hasta que la abras
     if (notice && !lookingAtBubble()) pendingReply = true;
     const base = characterStateFor(observer.status());
@@ -388,7 +434,7 @@ function registerShortcuts(): void {
     pause: () => observer.togglePause(),
     toggle_bubble: toggleBubble,
     summary: () => { showBubble(); void localSummary().then((t) => bubble?.webContents.send(IPC.chatReply, t)); },
-    new_chat: () => { ai.clearSession(); showBubble(); bubble?.webContents.send(IPC.chatClear); },
+    new_chat: () => { wipeChat(); showBubble(); bubble?.webContents.send(IPC.chatClear); }, // chat nuevo = historial borrado de verdad
   };
   for (const [name, run] of Object.entries(actions)) {
     const accel = config.shortcuts[name as keyof Config['shortcuts']];
@@ -413,7 +459,7 @@ async function handleSuggestionAccept(id: string): Promise<{ reply: string }> {
   if (!activeSuggestion || activeSuggestion.id !== id) return { reply: '' };
   const text = activeSuggestion.text;
   activeSuggestion = null;
-  return handleChat(text);
+  return handleChat(text, { asAssistant: true });
 }
 
 function handleSuggestionDismiss(id: string): void {
@@ -440,6 +486,7 @@ app.whenReady().then(() => {
     if (!profile) throw new Error('No hay ningún modelo configurado. Agrega uno en la pestaña Modelo.');
     return { profile, provider: createProvider(profile, keyFor(profile)) };
   });
+  ai.loadHistory(modelContext(db)); // la conversación sigue donde la dejaste
   suggestions = new SuggestionEngine(db, config);
 
   // ponytail: solo empaquetada; en dev registraría el binario de Electron como login item
@@ -485,6 +532,9 @@ app.whenReady().then(() => {
     modelsSave: handleModelsSave,
     modelsDelete: handleModelsDelete,
     modelsDetect: handleModelsDetect,
+    chatStop: stopChat,
+    chatHistory: () => loadHistory(db),
+    chatClearHistory: wipeChat,
     settingsGet: settingsState,
     settingsSet: handleSettingsSet,
   });

@@ -44,6 +44,9 @@ export interface IpcHandlers {
   modelsSave: (p: z.infer<typeof modelSave>) => unknown;
   modelsDelete: (id: string) => unknown;
   modelsDetect: (baseUrl?: string) => Promise<unknown>;
+  chatStop: () => boolean;
+  chatHistory: () => unknown;
+  chatClearHistory: () => number;
   settingsGet: () => unknown;
   settingsSet: (p: z.infer<typeof settingsPatch>) => unknown;
 }
@@ -109,6 +112,9 @@ export function registerIpc(h: IpcHandlers): void {
 
   ipcMain.handle(IPC.usageGet, () => h.usageGet());
 
+  ipcMain.handle(IPC.chatStop, () => h.chatStop());
+  ipcMain.handle(IPC.chatHistory, () => h.chatHistory());
+  ipcMain.handle(IPC.chatClearHistory, () => h.chatClearHistory());
   ipcMain.handle(IPC.settingsGet, () => h.settingsGet());
   ipcMain.handle(IPC.settingsSet, (_e, raw: unknown) => {
     const p = settingsPatch.safeParse(raw);

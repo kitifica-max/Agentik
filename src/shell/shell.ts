@@ -20,8 +20,8 @@ function clip(s: string): string {
 
 export function runCommand(
   command: string,
-  opts: { cwd: string; timeoutMs: number },
-): Promise<{ code: number | null; output: string; timedOut: boolean }> {
+  opts: { cwd: string; timeoutMs: number; signal?: AbortSignal },
+): Promise<{ code: number | null; output: string; timedOut: boolean; aborted?: boolean }> {
   return new Promise((resolve) => {
     const env = { ...process.env };
     delete env.ANTHROPIC_API_KEY;
@@ -36,11 +36,14 @@ export function runCommand(
     const add = (d: Buffer): void => { if (out.length < 200_000) out += d.toString(); };
     child.stdout.on('data', add);
     child.stderr.on('data', add);
-    const timer = setTimeout(() => {
-      timedOut = true;
-      try { process.kill(-child.pid!, 'SIGKILL'); } catch { child.kill('SIGKILL'); }
-    }, opts.timeoutMs);
-    child.on('error', (e) => { clearTimeout(timer); resolve({ code: null, output: String(e), timedOut }); });
-    child.on('close', (code) => { clearTimeout(timer); resolve({ code, output: clip(out), timedOut }); });
+    const kill = (): void => { try { process.kill(-child.pid!, 'SIGKILL'); } catch { child.kill('SIGKILL'); } };
+    const timer = setTimeout(() => { timedOut = true; kill(); }, opts.timeoutMs);
+    let aborted = false;
+    const onAbort = (): void => { aborted = true; kill(); }; // "Detener": mata el comando y todo lo que lanzó
+    if (opts.signal?.aborted) onAbort();
+    else opts.signal?.addEventListener('abort', onAbort, { once: true });
+    const done = (): void => { clearTimeout(timer); opts.signal?.removeEventListener('abort', onAbort); };
+    child.on('error', (e) => { done(); resolve({ code: null, output: String(e), timedOut, aborted }); });
+    child.on('close', (code) => { done(); resolve({ code, output: clip(out), timedOut, aborted }); });
   });
 }
