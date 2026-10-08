@@ -4,6 +4,7 @@ import { cpSync, mkdirSync } from 'node:fs';
 mkdirSync('dist/renderer/assets', { recursive: true });
 mkdirSync('dist/main', { recursive: true });
 cpSync('src/renderer', 'dist/renderer', { recursive: true });
-cpSync('assets/Agentik-head.svg', 'dist/renderer/assets/Agentik-head.svg');
-cpSync('assets/Agentik-torso.svg', 'dist/renderer/assets/Agentik-torso.svg');
+for (const id of ['nino', 'nina']) {
+  for (const part of ['head', 'torso']) cpSync(`assets/${id}-${part}.svg`, `dist/renderer/assets/${id}-${part}.svg`);
+}
 cpSync('config.json', 'dist/main/config.json');

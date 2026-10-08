@@ -7,8 +7,8 @@
  * ── Uso mínimo ────────────────────────────────────────────────────────────────────────
  *   <script src="avatar-engine.js"></script>
  *   const avatar = AgentikAvatar.mount(document.querySelector('svg.body'));
- *   avatar.setAvatarState('thinking');           // idle | listening | thinking | speaking |
- *                                                //  empathy | confusion | success | sleeping
+ *   avatar.setAvatarState('thinking');           // idle | listening | thinking | speaking | empathy |
+ *                                                //  confusion | success | calling (salta hasta que lo atiendas) | sleeping
  *   await avatar.triggerGesture('nod');          // nod, tilt, frown, baton, wink, shrug...
  *   const stop = avatar.startAudioSync(audioEl); // boca + gestos de énfasis según el audio
  *
@@ -66,6 +66,7 @@
     browL: { x: 68.5, y: 57.0 },
     browR: { x: 96.5, y: 57.0 },
     mouth: { x: 85.2, y: 87.4 },
+    eyeHalfW: 5, // mitad del ancho del párpado
   };
 
   // ═══ Estados ═══════════════════════════════════════════════════════════════════════════
@@ -137,6 +138,15 @@
       gestures: { every: [2000, 4000], pool: { bounce: 2, smile_pop: 2, nod: 1, wink: 0.8 } },
       enter: 'bounce',
     },
+    // Estado extra (respuesta pendiente): ilusionado, mira al frente y SALTA en bucle hasta que lo atiendas.
+    calling: {
+      pose: { smile: 1.2, happy: 0.55, browY: -1.6, lid: 1.15, mouthOpen: 0.3, headY: -0.5, mouthW: 1.1 },
+      blink: [2500, 4000], blinkMs: 150,
+      saccade: { every: [900, 1800], ax: 0.2, ay: 0.15, bx: 0, by: -0.05 },
+      breath: { period: 2000, amp: 1.4 },
+      gestures: { every: [1000, 1400], pool: { jump: 1 } },
+      enter: 'jump',
+    },
     // Estado extra (pausa del observador): ojos cerrados, respiración lenta, sin gestos.
     sleeping: {
       pose: { smile: 0.15, lid: 0, browY: 0.8, browInner: 0.4, headRot: 5, headY: 2.2, mouthW: 0.9 },
@@ -169,6 +179,8 @@
     wink: { dur: 800, tracks: { closeR: [[0, 0], [0.14, 1], [0.5, 1], [0.8, 0], [1, 0]], smile: hold(0.4, 0.2, 0.7), headRot: hold(3, 0.2, 0.7), browY: hold(-0.6, 0.2, 0.7) } },
     smile_pop: { dur: 1100, tracks: { smile: [[0, 0], [0.25, 0.5], [0.75, 0.35], [1, 0]], mouthW: [[0, 0], [0.25, 0.2], [0.75, 0.12], [1, 0]], happy: [[0, 0], [0.25, 0.55], [0.75, 0.35], [1, 0]], browY: [[0, 0], [0.3, -0.9], [1, 0]], headY: [[0, 0], [0.25, -0.9], [1, 0]] } },
     look_around: { dur: 2400, tracks: { gazeX: [[0, 0], [0.15, -1], [0.4, -1], [0.56, 1], [0.8, 1], [1, 0]], gazeY: [[0, 0], [0.3, -0.2], [0.7, 0.1], [1, 0]], headRot: [[0, 0], [0.18, -2.5], [0.4, -2.5], [0.58, 2.5], [0.82, 2.5], [1, 0]] } },
+    // Salto: sube con la cabeza llevando la delantera, cae con un pequeño rebote y se estira/aplasta al saltar
+    jump: { dur: 800, tracks: { headY: [[0, 0], [0.15, 1.5], [0.38, -5], [0.58, 0.8], [0.74, -1.5], [1, 0]], torsoY: [[0, 0], [0.15, 1], [0.38, -3.5], [0.58, 0.6], [0.74, -1], [1, 0]], torsoSY: [[0, 0], [0.15, -0.025], [0.38, 0.03], [0.58, -0.015], [1, 0]], browY: hold(-1.5, 0.3, 0.8), smile: hold(0.3, 0.3, 0.8), happy: hold(0.35, 0.3, 0.8), mouthOpen: hold(0.3, 0.3, 0.8) } },
     bounce: { dur: 1000, tracks: { headY: [[0, 0], [0.18, -2.8], [0.36, 0.6], [0.54, -1.6], [0.72, 0], [1, 0]], torsoY: [[0, 0], [0.18, -1.6], [0.36, 0.3], [0.54, -0.8], [1, 0]], browY: hold(-1, 0.2, 0.8) } },
     surprise: { dur: 1200, tracks: { browY: [[0, 0], [0.12, -3.4], [0.7, -3.1], [1, 0]], closeL: [[0, 0], [0.12, -0.3], [0.7, -0.3], [1, 0]], closeR: [[0, 0], [0.12, -0.3], [0.7, -0.3], [1, 0]], mouthOpen: [[0, 0], [0.12, 0.5], [0.7, 0.4], [1, 0]], headY: [[0, 0], [0.12, -1.2], [0.7, -1], [1, 0]], torsoSY: [[0, 0], [0.12, 0.01], [1, 0]] } },
   };
@@ -512,7 +524,8 @@
     }
 
     pickGesture(pool) {
-      const names = Object.keys(pool).filter((n) => n !== this.lastGesture && this.gestures[n]);
+      let names = Object.keys(pool).filter((n) => n !== this.lastGesture && this.gestures[n]);
+      if (names.length === 0) names = Object.keys(pool).filter((n) => this.gestures[n]); // un solo gesto: se repite
       const total = names.reduce((sum, n) => sum + pool[n], 0);
       let r = this.rand() * total;
       for (const n of names) {
@@ -595,7 +608,7 @@
     }
 
     drawEye(lid, pupil, eye, open, o) {
-      const w = 5;
+      const w = this.geo.eyeHalfW;
       const h = o.happy;
       const endY = eye.y + lerp(0.6, 1.9, h);
       const ctrlY = lerp(lerp(eye.y + 0.6, eye.y - 3.4, open), eye.y - 4.2, h); // happy → arco ^

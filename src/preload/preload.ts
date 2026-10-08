@@ -19,6 +19,7 @@ const IPC = {
   memoryReject: 'memory:reject',
   memoryDelete: 'memory:delete',
   memoryProposed: 'memory:proposed',
+  memoryRefresh: 'memory:refresh',
   suggestionShow: 'suggestion:show',
   suggestionAccept: 'suggestion:accept',
   suggestionDismiss: 'suggestion:dismiss',
@@ -33,6 +34,14 @@ const IPC = {
   configAddFolder: 'config:add-folder',
   configRemoveFolder: 'config:remove-folder',
   usageGet: 'usage:get',
+  modelsList: 'models:list',
+  modelsSetActive: 'models:set-active',
+  modelsSave: 'models:save',
+  modelsDelete: 'models:delete',
+  modelsDetect: 'models:detect',
+  settingsGet: 'settings:get',
+  settingsSet: 'settings:set',
+  avatarChanged: 'avatar:changed',
 } as const;
 
 const INVOKE: string[] = [
@@ -41,9 +50,11 @@ const INVOKE: string[] = [
   IPC.suggestionAccept, IPC.suggestionDismiss,
   IPC.fileEditList, IPC.fileEditApprove, IPC.fileEditApproveAll, IPC.fileEditReject, IPC.fileEditRejectAll, IPC.auditLog,
   IPC.configGetFolders, IPC.configAddFolder, IPC.configRemoveFolder, IPC.usageGet,
+  IPC.modelsList, IPC.modelsSetActive, IPC.modelsSave, IPC.modelsDelete, IPC.modelsDetect,
+  IPC.settingsGet, IPC.settingsSet,
 ];
 const SEND: string[] = [IPC.bubbleToggle, IPC.windowMoveBy, IPC.windowDragEnd, IPC.appQuit];
-const LISTEN: string[] = [IPC.characterState, IPC.observerChanged, IPC.chatReply, IPC.chatThinking, IPC.chatClear, IPC.memoryProposed, IPC.suggestionShow, IPC.fileEditProposed];
+const LISTEN: string[] = [IPC.characterState, IPC.observerChanged, IPC.chatReply, IPC.chatThinking, IPC.chatClear, IPC.memoryProposed, IPC.memoryRefresh, IPC.avatarChanged, IPC.suggestionShow, IPC.fileEditProposed];
 
 contextBridge.exposeInMainWorld('agentik', {
   channels: IPC,

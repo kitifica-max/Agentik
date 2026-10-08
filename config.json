@@ -25,6 +25,14 @@
   "memory_max_items_per_request": 5,
   "observer_poll_ms": 5000,
   "launch_at_login": true,
+  "notifications": true,
+  "sounds": true,
+  "avatar": "nino",
+  "habit_retention_days": 60,
+  "models": [
+    { "id": "claude-sonnet-5-5", "label": "Claude Sonnet 5.5", "provider": "anthropic", "model": "claude-sonnet-5-5" }
+  ],
+  "active_model": "claude-sonnet-5-5",
   "custom_rules": [],
   "shortcuts": {
     "pause": "CommandOrControl+Shift+P",

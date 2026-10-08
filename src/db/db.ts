@@ -55,6 +55,14 @@ CREATE TABLE IF NOT EXISTS usage (
 );
 CREATE INDEX IF NOT EXISTS idx_usage_ts ON usage(ts);
 
+CREATE TABLE IF NOT EXISTS habit_stats (
+  day  TEXT NOT NULL,
+  hour INTEGER NOT NULL,
+  app  TEXT NOT NULL,
+  ms   INTEGER NOT NULL,
+  PRIMARY KEY (day, hour, app)
+);
+
 CREATE TABLE IF NOT EXISTS app_state (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL

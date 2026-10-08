@@ -33,33 +33,6 @@ body {
   transition: opacity 0.4s ease;
 }
 
-/* El círculo es solo el contenedor: no se anima. */
-.circle,
-.patch {
-  fill: var(--paper);
-}
-
-/* La expresión la dibuja y anima avatar-engine.js (cejas, párpados, pupilas, boca). */
-.brow,
-.lid {
-  fill: none;
-  stroke: var(--ink);
-  stroke-linecap: round;
-}
-
-.brow { stroke-width: 1.4; }
-.lid { stroke-width: 1.5; }
-
-.pupil { fill: var(--ink); }
-
-.mouth {
-  fill: var(--ink);
-  stroke: var(--ink);
-  stroke-width: 1.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
 .indicator,
 .badge {
   position: absolute;
@@ -111,6 +84,11 @@ body {
 
 .badge[data-kind="esperando-aprobacion"] {
   background: var(--accent);
+}
+
+.badge[data-kind="pendiente"] {
+  background: var(--alert);
+  color: #fff;
 }
 
 .badge[data-kind="pausado"] {

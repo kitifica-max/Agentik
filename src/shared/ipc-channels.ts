@@ -18,6 +18,7 @@ export const IPC = {
   memoryReject: 'memory:reject',
   memoryDelete: 'memory:delete',
   memoryProposed: 'memory:proposed',
+  memoryRefresh: 'memory:refresh',
   suggestionShow: 'suggestion:show',
   suggestionAccept: 'suggestion:accept',
   suggestionDismiss: 'suggestion:dismiss',
@@ -32,6 +33,14 @@ export const IPC = {
   configAddFolder: 'config:add-folder',
   configRemoveFolder: 'config:remove-folder',
   usageGet: 'usage:get',
+  modelsList: 'models:list',
+  modelsSetActive: 'models:set-active',
+  modelsSave: 'models:save',
+  modelsDelete: 'models:delete',
+  modelsDetect: 'models:detect',
+  settingsGet: 'settings:get',
+  settingsSet: 'settings:set',
+  avatarChanged: 'avatar:changed',
 } as const;
 
 export const INVOKE_CHANNELS: string[] = [
@@ -40,6 +49,8 @@ export const INVOKE_CHANNELS: string[] = [
   IPC.suggestionAccept, IPC.suggestionDismiss,
   IPC.fileEditList, IPC.fileEditApprove, IPC.fileEditApproveAll, IPC.fileEditReject, IPC.fileEditRejectAll, IPC.auditLog,
   IPC.configGetFolders, IPC.configAddFolder, IPC.configRemoveFolder, IPC.usageGet,
+  IPC.modelsList, IPC.modelsSetActive, IPC.modelsSave, IPC.modelsDelete, IPC.modelsDetect,
+  IPC.settingsGet, IPC.settingsSet,
 ];
 export const SEND_CHANNELS: string[] = [IPC.bubbleToggle, IPC.windowMoveBy, IPC.windowDragEnd, IPC.appQuit];
-export const LISTEN_CHANNELS: string[] = [IPC.characterState, IPC.observerChanged, IPC.chatReply, IPC.chatThinking, IPC.chatClear, IPC.memoryProposed, IPC.suggestionShow, IPC.fileEditProposed];
+export const LISTEN_CHANNELS: string[] = [IPC.characterState, IPC.observerChanged, IPC.chatReply, IPC.chatThinking, IPC.chatClear, IPC.memoryProposed, IPC.memoryRefresh, IPC.avatarChanged, IPC.suggestionShow, IPC.fileEditProposed];

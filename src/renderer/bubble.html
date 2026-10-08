@@ -13,11 +13,17 @@
       <div class="header-actions">
         <button id="toggle" class="btn btn-sm" type="button">Activar</button>
         <button id="pause" class="btn btn-sm" type="button" hidden>Pausar</button>
-        <button id="tab-chat" class="tab active" type="button">Chat</button>
-        <button id="tab-memory" class="tab" type="button">Memoria</button>
-        <button id="tab-files" class="tab" type="button">Archivos</button>
       </div>
     </header>
+
+    <!-- Menú: Chat siempre es la primera pestaña -->
+    <nav class="tabs" aria-label="Secciones">
+      <button id="tab-chat" class="tab active" type="button">Chat</button>
+      <button id="tab-memory" class="tab" type="button">Memoria</button>
+      <button id="tab-files" class="tab" type="button">Archivos</button>
+      <button id="tab-models" class="tab" type="button">Modelo</button>
+      <button id="tab-settings" class="tab" type="button">Ajustes</button>
+    </nav>
 
     <div id="perm" class="perm" hidden>
       ⚠ Activa permisos de Accesibilidad para leer títulos de ventana.
@@ -68,12 +74,61 @@
       </div>
     </section>
 
+    <section id="view-models" class="view view-models" hidden>
+      <div class="folders-header">
+        <span class="folders-title">Modelos</span>
+        <button id="model-add" class="btn btn-sm btn-ok" type="button">+ Agregar</button>
+      </div>
+      <div id="model-list" class="model-list"></div>
+      <form id="model-form" class="model-form" autocomplete="off" hidden>
+        <label>Tipo
+          <select id="mf-provider">
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="openai">Compatible con OpenAI (OpenAI, OpenRouter, Groq, LM Studio...)</option>
+            <option value="ollama">Ollama (local)</option>
+          </select>
+        </label>
+        <label>Nombre <input id="mf-label" maxlength="60" placeholder="Mi modelo" required /></label>
+        <label>Modelo
+          <input id="mf-model" list="mf-models" maxlength="120" placeholder="claude-sonnet-5-5" required />
+          <datalist id="mf-models"></datalist>
+        </label>
+        <button id="mf-detect" type="button" class="btn btn-sm" hidden>Detectar modelos instalados en Ollama</button>
+        <label id="mf-url-row">URL <input id="mf-url" placeholder="https://api.openai.com/v1" /></label>
+        <label id="mf-key-row">API key <input id="mf-key" type="password" placeholder="Se guarda cifrada en el Llavero" autocomplete="off" /></label>
+        <label id="mf-ctx-row">Contexto (tokens) <input id="mf-ctx" type="number" min="512" step="512" placeholder="8192" /></label>
+        <div id="mf-prices" class="mf-prices">
+          <label>$ por millón (entrada) <input id="mf-pin" type="number" min="0" step="0.01" /></label>
+          <label>$ por millón (salida) <input id="mf-pout" type="number" min="0" step="0.01" /></label>
+        </div>
+        <div id="mf-error" class="perm" hidden></div>
+        <div class="file-edit-actions">
+          <button class="btn btn-sm btn-ok" type="submit">Guardar</button>
+          <button id="mf-cancel" class="btn btn-sm" type="button">Cancelar</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="view-settings" class="view view-models" hidden>
+      <div class="folders-header"><span class="folders-title">Avatar</span></div>
+      <div id="avatar-choices" class="avatar-choices"></div>
+      <div class="section-divider"></div>
+      <div class="folders-header"><span class="folders-title">Avisos y sonido</span></div>
+      <label class="setting"><input id="set-notif" type="checkbox" /> <span>Notificación de macOS cuando algo termine o falle</span></label>
+      <label class="setting"><input id="set-sound" type="checkbox" /> <span>Sonido "pop" y salto del personaje cuando haya una respuesta pendiente</span></label>
+      <div><button id="set-test" class="btn btn-sm" type="button">Probar el "pop"</button></div>
+    </section>
+
     <footer class="footer">
       <span class="shortcut">⌘⇧P pausa</span>
+      <span id="model-chip" class="chip" title="Modelo activo (clic para cambiar)"></span>
       <span id="cost" class="shortcut" title="Consumo estimado del agente"></span>
       <button id="quit" class="btn btn-sm btn-danger" type="button">Salir</button>
     </footer>
   </div>
+  <script src="avatar-engine.js"></script>
+  <script src="avatars.js"></script>
+  <script src="sounds.js"></script>
   <script src="bubble.js"></script>
 </body>
 </html>

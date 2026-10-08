@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { memoryDb } from './helpers.js';
-import { costUsd, recordUsage, usageTotals, fmtUsd, costReport } from '../src/ai/cost.js';
+import { profilePrice, costUsd, recordUsage, usageTotals, fmtUsd, costReport } from '../src/ai/cost.js';
 
 describe('cost', () => {
   it('Sonnet 5.5: $2 entrada, $10 salida, $0.20 caché leída, $2.50 caché escrita por millón', () => {
@@ -10,8 +10,19 @@ describe('cost', () => {
     expect(costUsd('claude-sonnet-5-5', { input_tokens: null, output_tokens: undefined })).toBe(0);
   });
 
-  it('modelo desconocido usa el precio de Sonnet 5.5', () => {
-    expect(costUsd('otro-modelo', { input_tokens: 1e6 })).toBeCloseTo(2);
+  it('modelo desconocido no tiene precio (0) salvo que el perfil lo defina', () => {
+    expect(costUsd('otro-modelo', { input_tokens: 1e6, output_tokens: 1e6 })).toBe(0);
+    expect(costUsd('otro-modelo', { input_tokens: 1e6, output_tokens: 1e6 }, { in: 1, out: 3 })).toBeCloseTo(4);
+    expect(costUsd('claude-sonnet-5-5', { input_tokens: 1e6 }, { in: 0, out: 0 })).toBe(0); // local: gratis aunque el nombre coincida
+  });
+
+  it('Ollama: local = $0; "-cloud" cobra (precio publicado o el que defina el perfil)', () => {
+    const base = { id: 'o', label: 'o', provider: 'ollama' as const };
+    expect(profilePrice({ ...base, model: 'qwen3:8b' })).toEqual({ in: 0, out: 0 });
+    expect(profilePrice({ ...base, model: 'gpt-oss:20b-cloud' })).toEqual({ in: 0.07, out: 0.3 });
+    expect(profilePrice({ ...base, model: 'gpt-oss:120b-cloud' })).toEqual({ in: 0, out: 0 }); // sin precio publicado: lo define el usuario
+    expect(profilePrice({ ...base, model: 'gpt-oss:120b-cloud', price_in: 1, price_out: 4 })).toEqual({ in: 1, out: 4 });
+    expect(costUsd('gpt-oss:20b-cloud', { input_tokens: 3000, output_tokens: 300 }, profilePrice({ ...base, model: 'gpt-oss:20b-cloud' }))).toBeCloseTo(0.0003, 4);
   });
 
   it('totales por hoy, 7 días y mes; ignora lo viejo', () => {

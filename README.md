@@ -17,17 +17,11 @@ Requisitos: macOS 13+, Node 22+.
 
 ## Configuración de la API key
 
-Crea `.env` en la raíz (ya está en `.gitignore`):
-
-```
-ANTHROPIC_API_KEY=tu_clave
-```
-
-Modelo: Claude Haiku 5.5. La clave nunca se escribe en logs ni en la base de datos.
+No hay archivos `.env`: la clave se configura **dentro de la app**, en la pestaña **Modelo** (Editar → API key → Guardar). Se guarda cifrada con el Llavero de macOS y nunca se escribe en el proyecto, en logs ni en la base de datos.
 
 ## Chat
 
-Haz clic en el personaje para abrir la burbuja. Escribe un mensaje y Agentik responde usando Claude Haiku con contexto de tu actividad reciente (apps, archivos modificados) y recuerdos aprobados.
+Haz clic en el personaje para abrir la burbuja. Escribe un mensaje y Agentik responde usando el modelo activo (pestaña Modelo) con contexto de tu actividad reciente (apps, archivos modificados) y recuerdos aprobados.
 
 Si le pides que recuerde algo, propone un recuerdo. Solo se guarda si lo apruebas. Datos sensibles (contraseñas, bancarios, salud, API keys) nunca se proponen como recuerdo.
 
@@ -90,7 +84,11 @@ Mientras el observador esté activo, el personaje muestra un punto rojo pulsante
 
 ## Animaciones del personaje
 
-El círculo es solo el contenedor y no se mueve. El personaje se anima por capas (`assets/Agentik-torso.svg` y `assets/Agentik-head.svg`, generadas con `node scripts/split-avatar.mjs`) con el motor `src/renderer/avatar-engine.js`: máquina de estados, respiración, parpadeo aleatorio cada 3 a 5 s, movimientos oculares (saccades), gestos y sincronía con audio. Siempre sonríe.
+El círculo es solo el contenedor y no se mueve. El personaje se anima por capas (cabeza y torso, generadas con `node scripts/split-avatar.mjs`) con el motor `src/renderer/avatar-engine.js`: máquina de estados, respiración, parpadeo aleatorio cada 3 a 5 s, movimientos oculares (saccades), gestos y sincronía con audio. Siempre sonríe.
+
+**Dos avatares**, a elegir en **Ajustes → Avatar** (cambia al instante, sin reiniciar):
+- **Niño** y **Niña** (con anteojos). Sus datos (ojos, boca, cuello, parches) están en `src/renderer/avatars.js`. El dibujo de la niña no tiene cejas, así que no se dibujan: su expresión va en ojos, boca y cabeza.
+- Para sumar otro: pon su SVG en `assets/`, agrégalo a `scripts/split-avatar.mjs` y copia una entrada de `avatars.js`.
 
 | Estado de la app | Estado del avatar | Qué hace |
 |---|---|---|
@@ -99,12 +97,41 @@ El círculo es solo el contenedor y no se mueve. El personaje se anima por capas
 | pensando | `thinking` | mira arriba a la izquierda, ceja alzada, cabeza ladeada |
 | con-sugerencia, exito | `success` | ojos felices, sonrisa abierta, rebote |
 | confuso (al fallar) | `confusion` | ceja asimétrica, sonrisa ladeada, mirada inquieta |
+| **pendiente** (respuesta sin leer) | `calling` | un "pop" al llegar y **salta en bucle** con insignia `1` hasta que abres el chat |
 | pausado | `sleeping` | ojos cerrados, respira lento, atenuado |
 | (por API) | `speaking`, `empathy` | habla con la boca, parpadea más; cejas internas arriba |
 
-API: `setAvatarState(state)`, `triggerGesture(name)` (`nod`, `tilt`, `frown`, `baton`, `wink`, `shrug`, `smile_pop`, `look_around`, `bounce`, `surprise`...) y `startAudioSync(audio)`. Hay una demo en `tools/avatar-demo.html` (`python3 -m http.server 8765` y abrir `/tools/avatar-demo.html`).
+**Respuesta pendiente:** si Agentik termina una respuesta y no estás mirando la burbuja, el personaje hace un "pop" (sintetizado, sin archivos de audio) y salta hasta que abres el chat. El sonido y el salto se pueden apagar en Ajustes. Con "reducir movimiento" de macOS no salta, pero sigue la insignia.
+
+API: `setAvatarState(state)`, `triggerGesture(name)` (`nod`, `tilt`, `frown`, `baton`, `wink`, `shrug`, `smile_pop`, `look_around`, `bounce`, `jump`, `surprise`...) y `startAudioSync(audio)`. Hay una demo con selector de avatar en `tools/avatar-demo.html` (`python3 -m http.server 8765` y abrir `/tools/avatar-demo.html`).
 
 Respeta "reducir movimiento" de macOS.
+
+## Avisos
+
+Cuando termina o falla algo y **no estás mirando la burbuja** (la tarea con modelo lento, un error de la API), Agentik manda una notificación nativa de macOS. Al hacer clic abre la burbuja. Si estás viendo la burbuja no avisa. Se desactivan en **Ajustes** (o con `"notifications": false` en `config.json`). Con el sonido activado la notificación va en silencio: el "pop" del personaje es el aviso.
+
+## Memoria de proyectos y hábitos
+
+Agentik aprende de ti, pero **solo propone**: nada se guarda hasta que lo apruebas en la pestaña **Memoria** (hay botones de aprobar o rechazar todo y un contador de pendientes).
+
+- **Proyectos:** detecta tus repos de git con actividad en los últimos 30 días y propone un recuerdo por proyecto (ruta, descripción y stack: Next.js, Electron, Python...). Un proyecto se propone una sola vez, aunque lo rechaces.
+- **Hábitos:** las apps que más usas y tus horas de mayor actividad. Necesitan al menos 3 días con el observador activo.
+- **Cuándo:** solo si el observador está activado, 30 segundos después de arrancar y cada 12 horas. También a petición: escribe `aprende` en el chat (funciona sin el observador y no gasta tokens).
+
+## Modelos y APIs
+
+En la pestaña **Modelo** eliges con qué modelo trabaja Agentik (el cambio aplica al siguiente mensaje) y puedes agregar más:
+
+| Tipo | Para qué | Notas |
+|---|---|---|
+| Anthropic | Claude | Tu API key, que pegas en la pestaña. |
+| Compatible con OpenAI | OpenAI, OpenRouter, Groq, LM Studio, vLLM... | URL base + modelo; la key y los precios son opcionales. |
+| Ollama (local) | Modelos en tu Mac | URL `http://localhost:11434`; "Detectar" lista los instalados. Cuesta $0. |
+
+- Las API keys se guardan **cifradas con el Llavero de macOS**. No van a la base de datos, al `config.json`, a los logs ni a la interfaz.
+- Para Ollama: `ollama pull qwen3:8b`. El modelo debe soportar **herramientas** (qwen3, llama3.1, mistral-nemo...). Se usa la API nativa para fijar el contexto (8192 tokens por defecto, editable).
+- El gasto del contador usa el precio de cada modelo; los locales suman $0.
 
 ## Privacidad
 
@@ -112,6 +139,7 @@ Respeta "reducir movimiento" de macOS.
 - App en primer plano y título de la ventana activa.
 - Duración de uso por app.
 - Cambios de archivos dentro de las carpetas autorizadas (nombre y ruta, no contenido).
+- Resumen de hábitos: tiempo de uso por **día, hora y app** (sin títulos de ventana), solo de lo que no está excluido. Sirve para proponerte recuerdos como "suele estar más activo de 9 a 13".
 
 **Qué no se registra nunca**
 - Pulsaciones de teclado.
@@ -130,6 +158,7 @@ Respeta "reducir movimiento" de macOS.
 
 **Cuánto dura**
 - Eventos de actividad: 24 horas por defecto (`retention_hours` en `config.json`). Una tarea horaria borra lo vencido.
+- Resumen de hábitos: 60 días por defecto (`habit_retention_days`, de 7 a 365).
 
 **Cómo borrarlo**
 - Desactiva el observador: deja de registrar de inmediato.

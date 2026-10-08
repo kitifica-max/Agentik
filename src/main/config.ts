@@ -16,6 +16,21 @@ export const DEFAULT_SHORTCUTS = {
   new_chat: 'Control+Alt+N',
 };
 
+export const DEFAULT_MODELS = [
+  { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5', provider: 'anthropic' as const, model: 'claude-sonnet-5-5' },
+];
+
+export const profileSchema = z.object({
+  id: z.string().regex(/^[a-z0-9][a-z0-9._-]{0,48}$/i),
+  label: z.string().min(1).max(60),
+  provider: z.enum(['anthropic', 'openai', 'ollama']),
+  model: z.string().min(1).max(120),
+  base_url: z.string().url().optional(),
+  price_in: z.number().min(0).optional(),
+  price_out: z.number().min(0).optional(),
+  num_ctx: z.number().int().min(512).max(1_000_000).optional(),
+});
+
 const schema = z.object({
   allowed_folders: z.array(z.string()).default([]),
   excluded_apps: z.array(z.string()).default(DEFAULT_EXCLUDED_APPS),
@@ -26,6 +41,12 @@ const schema = z.object({
   memory_max_items_per_request: z.number().int().positive().default(5),
   observer_poll_ms: z.number().int().min(1000).default(5000),
   launch_at_login: z.boolean().default(true),
+  notifications: z.boolean().default(true),
+  sounds: z.boolean().default(true),
+  avatar: z.enum(['nino', 'nina']).default('nino'),
+  habit_retention_days: z.number().int().min(7).max(365).default(60),
+  models: z.array(profileSchema).default(DEFAULT_MODELS), // vacía es válido: el usuario puede quitarlos todos
+  active_model: z.string().default(DEFAULT_MODELS[0]!.id),
   custom_rules: z.array(z.object({
     app: z.string().min(1),
     title_contains: z.string().optional(),
@@ -41,7 +62,10 @@ const schema = z.object({
 });
 
 export function parseConfig(raw: unknown): Config {
-  return schema.parse(raw);
+  const c = schema.parse(raw);
+  // Si el modelo activo ya no existe, cae al primero (o queda vacío si no hay ninguno).
+  if (!c.models.some((m) => m.id === c.active_model)) c.active_model = c.models[0]?.id ?? '';
+  return c;
 }
 
 export function loadConfig(file: string): Config {

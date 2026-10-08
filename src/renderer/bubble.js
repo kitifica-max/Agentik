@@ -27,6 +27,16 @@
   var suggestionText = document.getElementById('suggestion-text');
   var suggestionAccept = document.getElementById('suggestion-accept');
   var suggestionDismiss = document.getElementById('suggestion-dismiss');
+  var tabSettings = document.getElementById('tab-settings');
+  var viewSettings = document.getElementById('view-settings');
+  var avatarChoices = document.getElementById('avatar-choices');
+  var setNotif = document.getElementById('set-notif');
+  var setSound = document.getElementById('set-sound');
+  var tabModels = document.getElementById('tab-models');
+  var viewModels = document.getElementById('view-models');
+  var modelList = document.getElementById('model-list');
+  var modelChip = document.getElementById('model-chip');
+  var mForm = document.getElementById('model-form');
   var folderListEl = document.getElementById('folder-list');
   var addFolderBtn = document.getElementById('add-folder');
 
@@ -78,19 +88,49 @@
     viewChat.hidden = name !== 'chat';
     viewMemory.hidden = name !== 'memory';
     viewFiles.hidden = name !== 'files';
+    viewModels.hidden = name !== 'models';
+    viewSettings.hidden = name !== 'settings';
+    tabSettings.classList.toggle('active', name === 'settings');
+    tabModels.classList.toggle('active', name === 'models');
     tabChat.classList.toggle('active', name === 'chat');
     tabMemory.classList.toggle('active', name === 'memory');
     tabFiles.classList.toggle('active', name === 'files');
     if (name === 'memory') loadMemories();
     if (name === 'files') { loadFileEdits(); loadFolders(); }
+    if (name === 'models') loadModels();
+    if (name === 'settings') loadSettings();
   }
 
   function loadMemories() {
     api.invoke(ch.memoryList).then(function (list) {
       memoryList.innerHTML = '';
+      var pending = (list || []).filter(function (m) { return m.estado === 'propuesto'; });
+      tabMemory.textContent = pending.length > 0 ? 'Memoria (' + pending.length + ')' : 'Memoria';
+      tabMemory.classList.toggle('has-badge', pending.length > 0);
       if (!list || list.length === 0) {
         memoryList.innerHTML = '<p class="muted">Sin recuerdos guardados.</p>';
         return;
+      }
+      if (pending.length > 1) {
+        // Aprobar o rechazar todo de una vez (sin ir uno por uno)
+        var bar = document.createElement('div');
+        bar.className = 'batch-actions';
+        var okAll = document.createElement('button');
+        okAll.className = 'btn btn-sm btn-ok';
+        okAll.textContent = 'Aprobar todo (' + pending.length + ')';
+        okAll.onclick = function () {
+          okAll.disabled = true;
+          Promise.all(pending.map(function (m) { return api.invoke(ch.memoryApprove, m.id); })).then(function () { loadMemories(); });
+        };
+        var noAll = document.createElement('button');
+        noAll.className = 'btn btn-sm btn-danger';
+        noAll.textContent = 'Rechazar todo';
+        noAll.onclick = function () {
+          Promise.all(pending.map(function (m) { return api.invoke(ch.memoryReject, m.id); })).then(function () { loadMemories(); });
+        };
+        bar.appendChild(okAll);
+        bar.appendChild(noAll);
+        memoryList.appendChild(bar);
       }
       list.forEach(function (m) {
         var item = document.createElement('div');
@@ -289,10 +329,215 @@
     }, 3000);
   }
 
+  // ── Modelos: elegir el activo, agregar APIs (Anthropic, compatibles con OpenAI) y modelos locales (Ollama)
+  var DEFAULT_URL = { openai: 'https://api.openai.com/v1', ollama: 'http://localhost:11434' };
+  var PROVIDER_NAME = { anthropic: 'Anthropic', openai: 'API compatible con OpenAI', ollama: 'Ollama (local)' };
+  var mf = {
+    provider: document.getElementById('mf-provider'),
+    label: document.getElementById('mf-label'),
+    model: document.getElementById('mf-model'),
+    models: document.getElementById('mf-models'),
+    detect: document.getElementById('mf-detect'),
+    urlRow: document.getElementById('mf-url-row'),
+    url: document.getElementById('mf-url'),
+    keyRow: document.getElementById('mf-key-row'),
+    key: document.getElementById('mf-key'),
+    ctxRow: document.getElementById('mf-ctx-row'),
+    ctx: document.getElementById('mf-ctx'),
+    prices: document.getElementById('mf-prices'),
+    pin: document.getElementById('mf-pin'),
+    pout: document.getElementById('mf-pout'),
+    error: document.getElementById('mf-error'),
+  };
+  var editing = null; // perfil que se edita (null = nuevo)
+
+  function mfError(text) {
+    mf.error.textContent = text || '';
+    mf.error.hidden = !text;
+  }
+
+  // Muestra solo los campos que aplican al tipo elegido
+  function applyProviderUI(keepUrl) {
+    var p = mf.provider.value;
+    mf.urlRow.hidden = p === 'anthropic';
+    mf.keyRow.hidden = p === 'ollama';
+    mf.ctxRow.hidden = p !== 'ollama';
+    mf.prices.hidden = p === 'anthropic'; // en Ollama solo aplica a modelos -cloud; local = $0
+    mf.detect.hidden = p !== 'ollama';
+    mf.model.placeholder = p === 'anthropic' ? 'claude-sonnet-5-5' : p === 'ollama' ? 'qwen3:8b' : 'gpt-4o-mini';
+    if (!keepUrl) mf.url.value = DEFAULT_URL[p] || '';
+    mf.url.placeholder = DEFAULT_URL[p] || '';
+  }
+
+  function openModelForm(profile) {
+    editing = profile || null;
+    mfError('');
+    mf.provider.value = profile ? profile.provider : 'ollama';
+    mf.provider.disabled = !!profile;
+    applyProviderUI(!!profile);
+    mf.label.value = profile ? profile.label : '';
+    mf.model.value = profile ? profile.model : '';
+    mf.url.value = profile && profile.base_url ? profile.base_url : (profile ? '' : DEFAULT_URL.ollama);
+    mf.key.value = '';
+    mf.key.placeholder = profile && profile.hasKey ? 'Guardada. Déjalo vacío para conservarla' : 'Se guarda cifrada en el Llavero';
+    mf.ctx.value = profile && profile.num_ctx ? profile.num_ctx : '';
+    mf.pin.value = profile && profile.price_in != null ? profile.price_in : '';
+    mf.pout.value = profile && profile.price_out != null ? profile.price_out : '';
+    mf.models.innerHTML = '';
+    mForm.hidden = false;
+    mf.label.focus();
+  }
+
+  function renderModels(state) {
+    if (!state || state.error) { if (state && state.error) showToast(state.error); return; }
+    modelList.innerHTML = '';
+    modelChip.textContent = 'Sin modelo';
+    modelChip.title = 'No hay modelo configurado (clic para agregar uno)';
+    if (state.profiles.length === 0) {
+      var empty = document.createElement('p');
+      empty.className = 'model-empty';
+      empty.textContent = 'No hay ningún modelo. Pulsa "+ Agregar" para configurar uno (necesitas su API key, o un Ollama local).';
+      modelList.appendChild(empty);
+    }
+    state.profiles.forEach(function (p) {
+      var item = document.createElement('div');
+      item.className = 'model-item' + (p.id === state.active ? ' active' : '');
+
+      var main = document.createElement('div');
+      main.className = 'model-main';
+      var name = document.createElement('div');
+      name.className = 'model-name';
+      name.textContent = p.label;
+      var sub = document.createElement('div');
+      sub.className = 'model-sub';
+      sub.textContent = PROVIDER_NAME[p.provider] + ' · ' + p.model;
+      main.appendChild(name);
+      main.appendChild(sub);
+      if (p.provider !== 'ollama' && !p.hasKey) {
+        var warn = document.createElement('div');
+        warn.className = 'model-warn';
+        warn.textContent = p.provider === 'anthropic' ? 'Falta la API key' : 'Sin API key (solo si el servidor la pide)';
+        main.appendChild(warn);
+      }
+      item.appendChild(main);
+
+      if (p.id !== state.active) {
+        var use = document.createElement('button');
+        use.className = 'btn btn-xs btn-ok';
+        use.textContent = 'Usar';
+        use.onclick = function () {
+          api.invoke(ch.modelsSetActive, p.id).then(function (s) { renderModels(s); showToast('Modelo: ' + p.label); });
+        };
+        item.appendChild(use);
+      }
+      var edit = document.createElement('button');
+      edit.className = 'btn btn-xs';
+      edit.textContent = 'Editar';
+      edit.onclick = function () { openModelForm(p); };
+      item.appendChild(edit);
+      var del = document.createElement('button');
+      del.className = 'btn btn-xs btn-danger';
+      del.textContent = '✗';
+      del.title = 'Quitar este modelo';
+      del.onclick = function () {
+        if (!window.confirm('¿Quitar "' + p.label + '"? También se borra su API key guardada.')) return;
+        api.invoke(ch.modelsDelete, p.id).then(renderModels);
+      };
+      item.appendChild(del);
+      modelList.appendChild(item);
+
+      if (p.id === state.active) {
+        modelChip.textContent = p.label;
+        modelChip.title = 'Modelo activo: ' + p.model + ' (clic para cambiar)';
+      }
+    });
+  }
+
+  function loadModels() {
+    api.invoke(ch.modelsList).then(renderModels);
+  }
+
+  document.getElementById('model-add').addEventListener('click', function () { openModelForm(null); });
+  document.getElementById('mf-cancel').addEventListener('click', function () { mForm.hidden = true; });
+  mf.provider.addEventListener('change', function () { applyProviderUI(false); });
+
+  mf.detect.addEventListener('click', function () {
+    mfError('');
+    api.invoke(ch.modelsDetect, mf.url.value.trim() || undefined).then(function (r) {
+      if (r.error) { mfError(r.error); return; }
+      mf.models.innerHTML = '';
+      r.models.forEach(function (m) {
+        var o = document.createElement('option');
+        o.value = m;
+        mf.models.appendChild(o);
+      });
+      if (r.models.length === 0) { mfError('Ollama no tiene modelos instalados. Descarga uno con: ollama pull qwen3:8b'); return; }
+      if (!mf.model.value) mf.model.value = r.models[0];
+      if (!mf.label.value) mf.label.value = r.models[0] + ' (local)';
+      showToast(r.models.length + ' modelos encontrados');
+    });
+  });
+
+  mForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var p = mf.provider.value;
+    var payload = { label: mf.label.value.trim(), provider: p, model: mf.model.value.trim() };
+    if (editing) payload.id = editing.id;
+    if (p !== 'anthropic' && mf.url.value.trim()) payload.base_url = mf.url.value.trim();
+    if (p === 'ollama' && mf.ctx.value) payload.num_ctx = Number(mf.ctx.value);
+    if (p !== 'anthropic' && mf.pin.value !== '' && mf.pout.value !== '') {
+      payload.price_in = Number(mf.pin.value);
+      payload.price_out = Number(mf.pout.value);
+    }
+    if (p !== 'ollama' && mf.key.value.trim()) payload.api_key = mf.key.value.trim();
+    api.invoke(ch.modelsSave, payload).then(function (res) {
+      mf.key.value = '';
+      if (res && res.error) { mfError(res.error); return; }
+      mForm.hidden = true;
+      renderModels(res);
+      showToast('Modelo guardado');
+    });
+  });
+
+  // ── Ajustes: avatar (niño o niña), avisos y sonido
+  function renderSettings(s) {
+    if (!s || s.error) { if (s && s.error) showToast(s.error); return; }
+    avatarChoices.innerHTML = '';
+    window.AgentikAvatars.IDS.forEach(function (id) {
+      var def = window.AgentikAvatars.get(id);
+      var card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'avatar-choice' + (s.avatar === id ? ' selected' : '');
+      var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      card.appendChild(svg);
+      window.AgentikAvatars.build(svg, id);
+      // El mismo motor dibuja la miniatura (cara sonriente), pero quieta: sin animación
+      window.AgentikAvatar.mount(svg, { geometry: def.geometry, autoStart: false, random: function () { return 0.5; } });
+      var name = document.createElement('span');
+      name.textContent = def.label;
+      card.appendChild(name);
+      card.onclick = function () { api.invoke(ch.settingsSet, { avatar: id }).then(function (r) { renderSettings(r); showToast('Avatar: ' + def.label); }); };
+      avatarChoices.appendChild(card);
+    });
+    setNotif.checked = !!s.notifications;
+    setSound.checked = !!s.sounds;
+  }
+
+  function loadSettings() {
+    api.invoke(ch.settingsGet).then(renderSettings);
+  }
+
+  setNotif.addEventListener('change', function () { api.invoke(ch.settingsSet, { notifications: setNotif.checked }); });
+  setSound.addEventListener('change', function () { api.invoke(ch.settingsSet, { sounds: setSound.checked }); });
+  document.getElementById('set-test').addEventListener('click', function () { window.AgentikSounds.playPop(); });
+
   // Tabs
   tabChat.addEventListener('click', function () { showTab('chat'); });
   tabMemory.addEventListener('click', function () { showTab('memory'); });
   tabFiles.addEventListener('click', function () { showTab('files'); });
+  tabModels.addEventListener('click', function () { showTab('models'); });
+  tabSettings.addEventListener('click', function () { showTab('settings'); });
+  modelChip.addEventListener('click', function () { showTab('models'); });
 
   // Observer controls
   toggle.addEventListener('click', function () {
@@ -354,6 +599,9 @@
     if (on) messages.scrollTop = messages.scrollHeight;
   });
 
+  // Agentik propuso recuerdos por su cuenta (proyectos y hábitos): actualiza la lista y el contador
+  api.on(ch.memoryRefresh, function () { loadMemories(); });
+
   // Mensajes locales (resumen) y chat nuevo desde atajos
   api.on(ch.chatReply, function (text) { showTab('chat'); addMessage('assistant', text); });
   api.on(ch.chatClear, function () { messages.innerHTML = ''; showTab('chat'); });
@@ -399,6 +647,8 @@
   });
 
   loadCost();
+  loadModels();
+  loadMemories();
   api.on(ch.observerChanged, renderStatus);
   api.invoke(ch.observerStatus).then(renderStatus);
 })();

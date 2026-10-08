@@ -1,11 +1,16 @@
 import { ipcMain } from 'electron';
 import { z } from 'zod';
 import { IPC } from '../shared/ipc-channels.js';
+import { profileSchema } from './config.js';
 
 const boolean = z.boolean();
 const delta = z.object({ dx: z.number().finite(), dy: z.number().finite() });
 const chatMsg = z.string().min(1).max(4000);
 const memId = z.number().int().positive();
+
+const modelSave = profileSchema.partial({ id: true }).extend({ api_key: z.string().max(500).optional() });
+const settingsPatch = z.object({ avatar: z.enum(['nino', 'nina']).optional(), notifications: z.boolean().optional(), sounds: z.boolean().optional() });
+const modelId = z.string().min(1).max(60);
 
 const suggestionId = z.string().min(1).max(100);
 
@@ -34,6 +39,13 @@ export interface IpcHandlers {
   configAddFolder: () => Promise<string[]>;
   configRemoveFolder: (folder: string) => string[];
   usageGet: () => unknown;
+  modelsList: () => unknown;
+  modelsSetActive: (id: string) => unknown;
+  modelsSave: (p: z.infer<typeof modelSave>) => unknown;
+  modelsDelete: (id: string) => unknown;
+  modelsDetect: (baseUrl?: string) => Promise<unknown>;
+  settingsGet: () => unknown;
+  settingsSet: (p: z.infer<typeof settingsPatch>) => unknown;
 }
 
 export function registerIpc(h: IpcHandlers): void {
@@ -96,6 +108,30 @@ export function registerIpc(h: IpcHandlers): void {
   ipcMain.handle(IPC.auditLog, () => h.auditLog());
 
   ipcMain.handle(IPC.usageGet, () => h.usageGet());
+
+  ipcMain.handle(IPC.settingsGet, () => h.settingsGet());
+  ipcMain.handle(IPC.settingsSet, (_e, raw: unknown) => {
+    const p = settingsPatch.safeParse(raw);
+    return p.success ? h.settingsSet(p.data) : { error: 'Ajustes no válidos' };
+  });
+
+  ipcMain.handle(IPC.modelsList, () => h.modelsList());
+  ipcMain.handle(IPC.modelsSetActive, (_e, raw: unknown) => {
+    const id = modelId.safeParse(raw);
+    return id.success ? h.modelsSetActive(id.data) : { error: 'ID inválido' };
+  });
+  ipcMain.handle(IPC.modelsSave, (_e, raw: unknown) => {
+    const p = modelSave.safeParse(raw);
+    return p.success ? h.modelsSave(p.data) : { error: 'Datos del modelo no válidos' };
+  });
+  ipcMain.handle(IPC.modelsDelete, (_e, raw: unknown) => {
+    const id = modelId.safeParse(raw);
+    return id.success ? h.modelsDelete(id.data) : { error: 'ID inválido' };
+  });
+  ipcMain.handle(IPC.modelsDetect, (_e, raw: unknown) => {
+    const url = z.string().url().optional().safeParse(raw);
+    return url.success ? h.modelsDetect(url.data) : { error: 'URL no válida' };
+  });
   ipcMain.handle(IPC.configGetFolders, () => h.configGetFolders());
   ipcMain.handle(IPC.configAddFolder, () => h.configAddFolder());
   ipcMain.handle(IPC.configRemoveFolder, (_e, raw: unknown) => {

@@ -1,18 +1,17 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { readdirSync, statSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Db } from '../db/db.js';
-import type { Config, ChatMessage, Memory } from '../shared/types.js';
+import type { Config, ChatMessage, Memory, ModelProfile } from '../shared/types.js';
+import type { Provider, ToolDef, Msg, Block } from './providers.js';
 import { recentEventsSummary } from './eventSummary.js';
 import { approvedMemoriesForContext } from '../memory/memory.js';
 import { isSensitiveText } from '../memory/filters.js';
 import { isSensitivePath } from '../observer/filters.js';
 import { executeFileOp, organizeFolder, logAudit } from '../files/fileTools.js';
 import { runCommand, isBlockedCommand } from '../shell/shell.js';
-import { recordUsage } from './cost.js';
+import { recordUsage, profilePrice } from './cost.js';
 import { homedir } from 'node:os';
 
-const MODEL = 'claude-sonnet-5-5';
 const MAX_TOKENS = 8192;
 const MAX_TOOL_ROUNDS = 40;
 
@@ -29,7 +28,7 @@ REGLAS:
 8. remember_memory para recordar algo.
 9. Respuesta final: UNA oración corta en lenguaje cotidiano, como a un amigo. Sin listas, sin markdown (nada de ** ni comillas invertidas), sin rutas, extensiones, nombres de herramientas ni detalles técnicos. Di el resultado y, solo si algo quedó sin hacer, por qué en pocas palabras. Ej: "Listo, organicé Downloads: 130 archivos en 9 carpetas." / "Listo, 2 llaves privadas quedaron sin mover por seguridad."`;
 
-const TOOLS: Anthropic.Tool[] = [
+const TOOLS: ToolDef[] = [
   {
     name: 'organize_folder',
     description: 'Organizar los archivos sueltos de una carpeta por reglas; el código local los mueve (rápido, cientos de archivos). Las carpetas destino se crean solas. Los archivos que no cumplen ninguna regla se dejan. Primera regla que coincide gana.',
@@ -225,16 +224,15 @@ export interface ChatResult {
 }
 
 export class AiClient {
-  private anthropic: Anthropic;
   private sessionHistory: ChatMessage[] = [];
 
+  /** resolveModel se llama en cada mensaje: cambiar de modelo en la UI surte efecto de inmediato. */
   constructor(
     private db: Db,
     private config: Config,
     private backupDir: string,
-  ) {
-    this.anthropic = new Anthropic();
-  }
+    private resolveModel: () => { provider: Provider; profile: ModelProfile },
+  ) {}
 
   clearSession(): void {
     this.sessionHistory = [];
@@ -332,7 +330,9 @@ export class AiClient {
 
     this.sessionHistory.push({ role: 'user', content: userMessage });
 
-    const apiMessages: Anthropic.MessageParam[] = this.sessionHistory.map(m => ({
+    const { provider, profile } = this.resolveModel();
+    const price = profilePrice(profile);
+    const apiMessages: Msg[] = this.sessionHistory.map(m => ({
       role: m.role as 'user' | 'assistant',
       content: m.content,
     }));
@@ -343,29 +343,16 @@ export class AiClient {
 
     let hitLimit = true;
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      const response = await this.anthropic.messages.create({
-        model: MODEL,
-        max_tokens: MAX_TOKENS,
-        system,
-        tools: TOOLS,
-        messages: apiMessages,
-      });
+      const res = await provider.chat({ system, tools: TOOLS, messages: apiMessages, maxTokens: MAX_TOKENS });
+      recordUsage(this.db, profile.model, res.usage, price);
+      replyText = res.text;
 
-      if (response.usage) recordUsage(this.db, MODEL, response.usage);
+      if (res.toolCalls.length === 0) { hitLimit = false; break; }
 
-      const toolUses: Anthropic.ToolUseBlock[] = [];
-      replyText = '';
-      for (const block of response.content) {
-        if (block.type === 'text') replyText += block.text;
-        if (block.type === 'tool_use') toolUses.push(block);
-      }
+      apiMessages.push(res.assistantMsg);
 
-      if (toolUses.length === 0) { hitLimit = false; break; }
-
-      apiMessages.push({ role: 'assistant', content: response.content });
-
-      const toolResults: Anthropic.ToolResultBlockParam[] = [];
-      for (const tu of toolUses) {
+      const toolResults: Block[] = [];
+      for (const tu of res.toolCalls) {
         const input = (tu.input ?? {}) as Record<string, unknown>;
 
         if (tu.name === 'remember_memory') {
