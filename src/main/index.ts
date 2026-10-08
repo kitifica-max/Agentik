@@ -13,7 +13,7 @@ import { IPC } from '../shared/ipc-channels.js';
 import { AiClient } from '../ai/client.js';
 import { proposeMemory, approveMemory, rejectMemory, deleteMemory, listMemories } from '../memory/memory.js';
 import { SuggestionEngine, type Suggestion } from '../suggestions/engine.js';
-import { proposeFileEdit, proposeFileMove, proposeFileMkdir, proposeFileCopy, approveFileEdit, approveAllFileEdits, rejectFileEdit, rejectAllFileEdits, listFileEdits, getAuditLog } from '../files/fileTools.js';
+import { approveFileEdit, approveAllFileEdits, rejectFileEdit, rejectAllFileEdits, listFileEdits, getAuditLog } from '../files/fileTools.js';
 import type { CharacterState, Config, MemoryTipo, ObserverStatus } from '../shared/types.js';
 
 // ponytail: busca .env en proyecto (dev) y ~/.agetik.env (producción)
@@ -173,39 +173,11 @@ async function handleChat(msg: string): Promise<{ reply: string }> {
       }
     }
 
-    // Parse file operations from AI response
-    let cleanReply = result.reply;
-    const ops: Array<{ result: ReturnType<typeof proposeFileEdit> }> = [];
-
-    for (const m of cleanReply.matchAll(/\[FILE_EDIT:(.+?)\]([\s\S]+?)\[\/FILE_EDIT\]/g)) {
-      ops.push({ result: proposeFileEdit(db, config, m[1], m[2]) });
-    }
-    cleanReply = cleanReply.replace(/\[FILE_EDIT:.+?\][\s\S]+?\[\/FILE_EDIT\]/g, '');
-
-    for (const m of cleanReply.matchAll(/\[FILE_MOVE:(.+?):(.+?)\]/g)) {
-      ops.push({ result: proposeFileMove(db, config, m[1], m[2]) });
-    }
-    cleanReply = cleanReply.replace(/\[FILE_MOVE:.+?:.+?\]/g, '');
-
-    for (const m of cleanReply.matchAll(/\[FILE_MKDIR:(.+?)\]/g)) {
-      ops.push({ result: proposeFileMkdir(db, config, m[1]) });
-    }
-    cleanReply = cleanReply.replace(/\[FILE_MKDIR:.+?\]/g, '');
-
-    for (const m of cleanReply.matchAll(/\[FILE_COPY:(.+?):(.+?)\]/g)) {
-      ops.push({ result: proposeFileCopy(db, config, m[1], m[2]) });
-    }
-    cleanReply = cleanReply.replace(/\[FILE_COPY:.+?:.+?\]/g, '');
-
-    for (const { result: opResult } of ops) {
-      if ('id' in opResult) {
-        setCharacterState('esperando-aprobacion');
-        bubble?.webContents.send(IPC.fileEditProposed, opResult);
-      }
+    if (result.opsExecuted > 0) {
+      showToastInBubble(`${result.opsExecuted} operaciones ejecutadas`);
     }
 
-    cleanReply = cleanReply.trim();
-    return { reply: cleanReply || result.reply };
+    return { reply: result.reply };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Error desconocido';
     return { reply: `Error: ${message}` };
@@ -213,6 +185,12 @@ async function handleChat(msg: string): Promise<{ reply: string }> {
     setCharacterState(characterStateFor(observer.status()));
     bubble?.webContents.send(IPC.chatThinking, false);
   }
+}
+
+function showToastInBubble(text: string): void {
+  bubble?.webContents.executeJavaScript(
+    `(typeof showToast === 'function') && showToast(${JSON.stringify(text)})`,
+  ).catch(() => {});
 }
 
 function evaluateSuggestions(): void {
@@ -245,7 +223,7 @@ app.whenReady().then(() => {
   db = openDb(join(app.getPath('userData'), 'agetik.db'));
   backupDir = join(app.getPath('userData'), 'backups');
   observer = new Observer(db, config, readActiveWindow, pushStatus);
-  ai = new AiClient(db, config);
+  ai = new AiClient(db, config, backupDir);
   suggestions = new SuggestionEngine(db, config);
 
   createWindows();

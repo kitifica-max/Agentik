@@ -266,6 +266,7 @@
     api.invoke(ch.configAddFolder).then(function () { loadFolders(); });
   });
 
+  window.showToast = showToast;
   function showToast(text) {
     var toast = document.createElement('div');
     toast.className = 'toast';

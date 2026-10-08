@@ -3,7 +3,7 @@ import { writeFileSync, readFileSync, mkdirSync, rmSync, existsSync } from 'node
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { memoryDb } from './helpers.js';
-import { proposeFileEdit, proposeFileMove, proposeFileMkdir, proposeFileCopy, approveFileEdit, approveAllFileEdits, rejectFileEdit, rejectAllFileEdits, listFileEdits, logAudit, getAuditLog } from '../src/files/fileTools.js';
+import { proposeFileEdit, proposeFileMove, proposeFileMkdir, proposeFileCopy, approveFileEdit, approveAllFileEdits, executeFileOp, organizeFolder, rejectFileEdit, rejectAllFileEdits, listFileEdits, logAudit, getAuditLog } from '../src/files/fileTools.js';
 import type { Config } from '../src/shared/types.js';
 
 const testDir = join(tmpdir(), 'agetik-test-' + Date.now());
@@ -297,5 +297,93 @@ describe('rejectAllFileEdits', () => {
 
     const list = listFileEdits(db);
     expect(list.every(e => e.status === 'rechazado')).toBe(true);
+  });
+});
+
+describe('executeFileOp', () => {
+  it('mueve una carpeta completa (antes fallaba en el backup)', () => {
+    const db = memoryDb();
+    const src = join(allowedDir, 'dir-src');
+    mkdirSync(src);
+    writeFileSync(join(src, 'a.txt'), 'a');
+    const r = executeFileOp(db, testConfig(), backupDir, 'move', src, { dest: join(allowedDir, 'Agrupado/dir-src') });
+    expect(r.success).toBe(true);
+    expect(existsSync(join(allowedDir, 'Agrupado/dir-src/a.txt'))).toBe(true);
+  });
+
+  it('no pisa un destino existente', () => {
+    const db = memoryDb();
+    const src = join(allowedDir, 's.txt');
+    const dest = join(allowedDir, 'd.txt');
+    writeFileSync(src, 'src');
+    writeFileSync(dest, 'dest');
+    const r = executeFileOp(db, testConfig(), backupDir, 'move', src, { dest });
+    expect(r.success).toBe(false);
+    expect(readFileSync(dest, 'utf8')).toBe('dest');
+    expect(existsSync(src)).toBe(true);
+  });
+
+  it('destino carpeta existente: mueve dentro con el mismo nombre', () => {
+    const db = memoryDb();
+    const src = join(allowedDir, 'x.txt');
+    const folder = join(allowedDir, 'Docs');
+    writeFileSync(src, 'x');
+    mkdirSync(folder);
+    const r = executeFileOp(db, testConfig(), backupDir, 'move', src, { dest: folder });
+    expect(r.success).toBe(true);
+    expect(existsSync(join(folder, 'x.txt'))).toBe(true);
+  });
+
+  it('destino terminado en "/" es carpeta, no renombra el archivo', () => {
+    const db = memoryDb();
+    const src = join(allowedDir, 'cap.png');
+    writeFileSync(src, 'x');
+    const r = executeFileOp(db, testConfig(), backupDir, 'move', src, { dest: join(allowedDir, 'Capturas/2026-05') + '/' });
+    expect(r.success).toBe(true);
+    expect(existsSync(join(allowedDir, 'Capturas/2026-05/cap.png'))).toBe(true);
+  });
+
+  it('write respalda el original; mkdir es idempotente; ruta ausente no lanza', () => {
+    const db = memoryDb();
+    const f = join(allowedDir, 'w.txt');
+    writeFileSync(f, 'v1');
+    expect(executeFileOp(db, testConfig(), backupDir, 'write', f, { content: 'v2' }).success).toBe(true);
+    expect(readFileSync(f, 'utf8')).toBe('v2');
+    expect(executeFileOp(db, testConfig(), backupDir, 'mkdir', allowedDir).success).toBe(true);
+    expect(executeFileOp(db, testConfig(), backupDir, 'move', undefined as unknown as string).success).toBe(false);
+  });
+
+  it('rechaza fuera de carpetas autorizadas', () => {
+    const db = memoryDb();
+    expect(executeFileOp(db, testConfig(), backupDir, 'mkdir', '/tmp/fuera-agetik').success).toBe(false);
+  });
+});
+
+describe('organizeFolder', () => {
+  it('mueve por reglas y agrupa por mes (fecha del nombre)', () => {
+    const db = memoryDb();
+    writeFileSync(join(allowedDir, 'Captura de pantalla 2026-05-16 a la(s) 9.45.png'), 'x');
+    writeFileSync(join(allowedDir, 'Captura de pantalla 2026-06-02 a la(s) 1.10.png'), 'x');
+    writeFileSync(join(allowedDir, 'informe.PDF'), 'x');
+    writeFileSync(join(allowedDir, 'notas.xyz'), 'x');
+    mkdirSync(join(allowedDir, 'CarpetaVieja'));
+    const r = organizeFolder(db, testConfig(), backupDir, allowedDir, [
+      { name_contains: 'Captura de pantalla', dest: 'Capturas' },
+      { extensions: ['.pdf'], dest: 'Docs' },
+    ], 'month');
+    expect(r.moved).toBe(3);
+    expect(r.skipped).toBe(1);
+    expect(existsSync(join(allowedDir, 'Capturas/2026-05/Captura de pantalla 2026-05-16 a la(s) 9.45.png'))).toBe(true);
+    expect(existsSync(join(allowedDir, 'Capturas/2026-06'))).toBe(true);
+    expect(existsSync(join(allowedDir, 'Docs', new Date().getFullYear().toString() + '-' + String(new Date().getMonth() + 1).padStart(2, '0'), 'informe.PDF'))).toBe(true);
+    expect(existsSync(join(allowedDir, 'notas.xyz'))).toBe(true);
+    expect(existsSync(join(allowedDir, 'CarpetaVieja'))).toBe(true);
+  });
+
+  it('rechaza carpetas fuera de las autorizadas', () => {
+    const db = memoryDb();
+    const r = organizeFolder(db, testConfig(), backupDir, '/tmp', [{ extensions: ['png'], dest: 'X' }]);
+    expect(r.moved).toBe(0);
+    expect(r.errors.length).toBeGreaterThan(0);
   });
 });

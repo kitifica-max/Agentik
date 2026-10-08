@@ -1,5 +1,5 @@
-import { readFileSync, writeFileSync, copyFileSync, mkdirSync, renameSync, existsSync } from 'node:fs';
-import { resolve, basename, dirname, isAbsolute } from 'node:path';
+import { readFileSync, writeFileSync, copyFileSync, mkdirSync, renameSync, existsSync, statSync, readdirSync } from 'node:fs';
+import { resolve, basename, dirname, isAbsolute, join, extname } from 'node:path';
 import type { Db } from '../db/db.js';
 import type { Config, FileEdit } from '../shared/types.js';
 import { isSensitivePath } from '../observer/filters.js';
@@ -161,6 +161,116 @@ export function approveFileEdit(db: Db, id: number, backupDir: string): FileEdit
   logAudit(db, `file_${payload.op}_applied`, `${row.path} (backup: ${backupPath ?? 'nuevo'})`);
 
   return { id, ts: row.ts, path: row.path, status: 'aplicado', backup_path: backupPath, diff: payload.preview };
+}
+
+export function executeFileOp(
+  db: Db, config: Config, backupDir: string,
+  op: FileOp, filePath: string, opts?: { content?: string; dest?: string },
+): { success: boolean; message: string } {
+  if (typeof filePath !== 'string' || !filePath) return { success: false, message: 'Falta ruta' };
+  const abs = validatePath(config, filePath);
+  if (typeof abs !== 'string') return { success: false, message: abs.error };
+
+  if (op === 'move' || op === 'copy') {
+    if (typeof opts?.dest !== 'string' || !opts.dest) return { success: false, message: 'Falta destino' };
+    let absDest = validatePath(config, opts.dest);
+    if (typeof absDest !== 'string') return { success: false, message: absDest.error };
+    if (!existsSync(abs)) return { success: false, message: `No existe: ${abs}` };
+    // destino = carpeta (termina en "/" o ya existe) → dentro de ella, con el mismo nombre
+    if (opts.dest.endsWith('/') || (existsSync(absDest) && statSync(absDest).isDirectory())) absDest = resolve(absDest, basename(abs));
+    if (existsSync(absDest)) return { success: false, message: `Destino ya existe: ${absDest}` };
+    opts = { ...opts, dest: absDest };
+  }
+
+  if (op === 'mkdir' && existsSync(abs) && statSync(abs).isDirectory()) {
+    return { success: true, message: `Ya existía: ${abs}` };
+  }
+
+  // Backup solo de lo que se sobrescribe (write); mover/copiar nunca pisan destino.
+  if (op === 'write' && existsSync(abs)) {
+    try {
+      if (statSync(abs).isFile()) {
+        mkdirSync(backupDir, { recursive: true });
+        copyFileSync(abs, resolve(backupDir, `${Date.now()}_${basename(abs)}`));
+      }
+    } catch (e) {
+      return { success: false, message: `Backup falló: ${e instanceof Error ? e.message : e}` };
+    }
+  }
+
+  try {
+    switch (op) {
+      case 'mkdir':
+        mkdirSync(abs, { recursive: true });
+        break;
+      case 'move':
+        mkdirSync(dirname(opts!.dest!), { recursive: true });
+        renameSync(abs, opts!.dest!);
+        break;
+      case 'copy':
+        mkdirSync(dirname(opts!.dest!), { recursive: true });
+        copyFileSync(abs, opts!.dest!);
+        break;
+      case 'write':
+        mkdirSync(dirname(abs), { recursive: true });
+        writeFileSync(abs, opts!.content!, 'utf8');
+        break;
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    logAudit(db, `file_${op}_failed`, `${abs}: ${msg}`);
+    return { success: false, message: msg };
+  }
+
+  const preview = op === 'move' || op === 'copy' ? `${op}: ${abs} → ${opts!.dest}` : `${op}: ${abs}`;
+  db.prepare('INSERT INTO file_edits (ts, path, status, diff) VALUES (?, ?, ?, ?)').run(
+    Date.now(), abs, 'aplicado', JSON.stringify({ op, preview }),
+  );
+  logAudit(db, `file_${op}_applied`, abs);
+  return { success: true, message: `OK: ${preview}` };
+}
+
+export interface OrganizeRule { extensions?: string[]; name_contains?: string; dest: string }
+
+// El modelo decide las reglas; la Mac mueve los archivos (cientos en milisegundos).
+export function organizeFolder(
+  db: Db, config: Config, backupDir: string, folder: string,
+  rules: OrganizeRule[], groupBy: 'none' | 'month' | 'year' = 'none',
+): { moved: number; skipped: number; byDest: Record<string, number>; errors: string[] } {
+  const res = { moved: 0, skipped: 0, byDest: {} as Record<string, number>, errors: [] as string[] };
+  const abs = typeof folder === 'string' && folder ? validatePath(config, folder) : { error: 'Falta carpeta' };
+  if (typeof abs !== 'string') { res.errors.push(abs.error); return res; }
+  if (!Array.isArray(rules) || rules.length === 0) { res.errors.push('Sin reglas'); return res; }
+
+  const norm = rules.map((r) => ({
+    exts: (r.extensions ?? []).map((e) => e.replace(/^\./, '').toLowerCase()),
+    contains: r.name_contains?.toLowerCase(),
+    dest: r.dest,
+  }));
+
+  const run = (): void => {
+    for (const ent of readdirSync(abs, { withFileTypes: true })) {
+      if (!ent.isFile() || ent.name.startsWith('.')) continue;
+      const lower = ent.name.toLowerCase();
+      const ext = extname(lower).slice(1);
+      const rule = norm.find((r) => (r.exts.length > 0 && r.exts.includes(ext)) || (r.contains && lower.includes(r.contains)));
+      if (!rule || !rule.dest) { res.skipped++; continue; }
+
+      let destDir = isAbsolute(rule.dest) ? rule.dest : join(abs, rule.dest);
+      if (groupBy !== 'none') {
+        const m = ent.name.match(/(20\d{2})-(\d{2})-\d{2}/);
+        const d = statSync(join(abs, ent.name)).mtime;
+        const yyyy = m ? m[1] : String(d.getFullYear());
+        const mm = m ? m[2] : String(d.getMonth() + 1).padStart(2, '0');
+        destDir = join(destDir, groupBy === 'year' ? yyyy : `${yyyy}-${mm}`);
+      }
+      const r = executeFileOp(db, config, backupDir, 'move', join(abs, ent.name), { dest: join(destDir, ent.name) });
+      if (r.success) { res.moved++; res.byDest[rule.dest] = (res.byDest[rule.dest] ?? 0) + 1; }
+      else res.errors.push(`${ent.name}: ${r.message}`);
+    }
+  };
+  db.transaction(run)();
+  return res;
 }
 
 const OP_ORDER: Record<FileOp, number> = { mkdir: 0, move: 1, copy: 2, write: 3 };
