@@ -71,6 +71,14 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   kind    TEXT NOT NULL DEFAULT 'ai' CHECK (kind IN ('ai','local','error','stopped'))
 );
 
+CREATE TABLE IF NOT EXISTS conversations (
+  id      INTEGER PRIMARY KEY,
+  title   TEXT NOT NULL DEFAULT '',
+  created INTEGER NOT NULL,
+  updated INTEGER NOT NULL,
+  pinned  INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS app_state (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL
@@ -81,6 +89,10 @@ export function openDb(file: string): Db {
   const db = new Database(file);
   db.pragma('journal_mode = WAL');
   db.exec(SCHEMA);
+  // Migración: los mensajes guardados antes de las conversaciones quedan con conversation_id NULL y se agrupan al abrir.
+  const cols = db.pragma('table_info(chat_messages)') as { name: string }[];
+  if (!cols.some((c) => c.name === 'conversation_id')) db.exec('ALTER TABLE chat_messages ADD COLUMN conversation_id INTEGER');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_chat_conv ON chat_messages(conversation_id)');
   return db;
 }
 
