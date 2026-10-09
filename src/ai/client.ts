@@ -11,6 +11,7 @@ import { isSensitivePath } from '../observer/filters.js';
 import { executeFileOp, organizeFolder, logAudit } from '../files/fileTools.js';
 import { runCommand, isBlockedCommand } from '../shell/shell.js';
 import { recordUsage, profilePrice } from './cost.js';
+import { compactToolResults } from './compact.js';
 import { homedir } from 'node:os';
 
 const MAX_TOKENS = 8192;
@@ -345,6 +346,7 @@ export class AiClient {
       content: m.content,
     }));
 
+    const toolNames = new Map<string, string>(); // tool_use_id → herramienta, para compactar resultados viejos
     let replyText = '';
     let opsExecuted = 0;
     let proposedMemory: { tipo: string; contenido: string } | undefined;
@@ -353,6 +355,7 @@ export class AiClient {
     let stopped = false; // el usuario pulsó "Detener"
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
       if (signal?.aborted) { stopped = true; break; }
+      compactToolResults(apiMessages, toolNames); // solo el último grupo de resultados viaja completo
       let res: LlmResult;
       try {
         res = await provider.chat({ system, systemParts, tools: TOOLS, messages: apiMessages, maxTokens: MAX_TOKENS, signal });
@@ -371,6 +374,7 @@ export class AiClient {
       for (const tu of res.toolCalls) {
         if (signal?.aborted) { stopped = true; break; } // no arranca más herramientas
         const input = (tu.input ?? {}) as Record<string, unknown>;
+        toolNames.set(tu.id, tu.name);
 
         if (tu.name === 'remember_memory') {
           const contenido = typeof input.contenido === 'string' ? input.contenido : '';

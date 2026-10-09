@@ -112,6 +112,24 @@ describe('bucle del agente con cualquier proveedor', () => {
     expect(JSON.stringify(r1!.tools)).toBe(JSON.stringify(r2!.tools));
   });
 
+  it('compacta resultados de rondas anteriores: la 3ª llamada lleva el 1er resultado resumido y el último completo', async () => {
+    const db = memoryDb();
+    writeFileSync(join(allowed, 'a.txt'), 'hola');
+    const { provider, requests } = script([
+      step('', [{ id: 'r1', name: 'list_folder', input: { path: allowed } }]),
+      step('', [{ id: 'r2', name: 'read_file', input: { path: join(allowed, 'a.txt') } }]),
+      step('Listo'),
+    ]);
+    await client(db, () => ({ provider, profile: local })).chat('mira');
+    const groups = requests[2]!.messages.filter((m) => Array.isArray(m.content) && (m.content as any[]).some((b) => b.type === 'tool_result'));
+    expect(groups).toHaveLength(2);
+    expect((groups[0]!.content as any)[0].content).toMatch(/^\[resultado previo: list_folder → \d+ bytes, ok\]$/);
+    expect((groups[1]!.content as any)[0].content).toBe('hola');
+    // cada tool_use tiene su tool_result
+    const ids = (t: string) => requests[2]!.messages.flatMap((m) => (Array.isArray(m.content) ? (m.content as any[]).filter((b) => b.type === t).map((b) => b.id ?? b.tool_use_id) : []));
+    expect(ids('tool_result')).toEqual(ids('tool_use'));
+  });
+
   it('se detiene en el límite de rondas y lo avisa', async () => {
     const db = memoryDb();
     const loop = step('', [{ id: 'x', name: 'list_folder', input: { path: allowed } }]);
