@@ -22,13 +22,22 @@
     { id: 'pasos', title: 'Primeros pasos', checklist: true, body: ['Se marcan solos según lo que ya tengas listo.'] },
     { id: 'pedir', title: 'Qué puedes pedirme', examples: true, body: ['Escríbelo como se lo dirías a una persona. Toca un ejemplo para probarlo:'] },
     {
+      id: 'chats',
+      title: 'Varias conversaciones',
+      body: [
+        'Cada tema, su propia conversación. Con ☰ Chats ves tus tarjetas y vuelves a cualquiera.',
+        '+ Nuevo (o Ctrl+Opción+N) empieza una limpia: no mezclo temas y gasto menos.',
+        'Guardo hasta 20. Al llegar al límite se borra la más vieja que no hayas fijado; con Fijar se queda. Te aviso antes.',
+      ],
+    },
+    {
       id: 'control',
       title: 'Tú tienes el control',
       body: [
         'Detener: mientras trabajo aparece el botón Detener (o pulsa Esc).',
         'Puedo ejecutar comandos y mover archivos. Antes de sobrescribir un archivo guardo una copia, pero mover o borrar no se deshace solo: revisa lo que me pides.',
-        'Borrar historial: botón en el chat y en Ajustes. Los recuerdos nuevos los apruebas tú, en la pestaña Memoria.',
-        'Atajos: ⌘⇧P pausa el observador · Ctrl+Opción+A abre o cierra el chat · Ctrl+Opción+R resumen · Ctrl+Opción+N chat nuevo.',
+        'Borrar: cada conversación se borra desde su tarjeta o con el botón del chat; en Ajustes, todas a la vez. Los recuerdos nuevos los apruebas tú, en la pestaña Memoria.',
+        'Atajos: ⌘⇧P pausa el observador · Ctrl+Opción+A abre o cierra el chat · Ctrl+Opción+R resumen · Ctrl+Opción+N conversación nueva.',
         'En Ajustes eliges avatar (niño o niña), avisos y sonido. Vuelve a esta guía cuando quieras con el botón ? de arriba.',
       ],
     },

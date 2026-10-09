@@ -104,6 +104,7 @@
     viewModels.hidden = name !== 'models';
     viewSettings.hidden = name !== 'settings';
     viewGuide.hidden = name !== 'guide';
+    document.getElementById('view-chats').hidden = name !== 'chats';
     tabSettings.classList.toggle('active', name === 'settings');
     tabModels.classList.toggle('active', name === 'models');
     tabChat.classList.toggle('active', name === 'chat');
@@ -114,6 +115,7 @@
     if (name === 'models') loadModels();
     if (name === 'settings') loadSettings();
     if (name === 'guide') renderGuide();
+    if (name === 'chats') loadChats();
   }
 
   function loadMemories() {
@@ -584,12 +586,13 @@
   }
 
   // Ilustraciones animadas de la guía (SVG en línea, sin recursos externos; las animaciones están en bubble.css)
-  var GUIDE_ART = [
-    '<svg viewBox="0 0 300 150" aria-hidden="true"><rect class="w" x="22" y="14" width="170" height="112" rx="10"/><path d="M22 36h170"/><circle class="f" cx="38" cy="25" r="3.5"/><circle class="f" cx="52" cy="25" r="3.5"/><circle class="f" cx="66" cy="25" r="3.5"/><circle class="ring" cx="107" cy="82" r="32"/><g class="bnc"><circle class="p" cx="107" cy="82" r="32"/><ellipse class="f blk" cx="96" cy="76" rx="3.5" ry="5.5"/><ellipse class="f blk" cx="118" cy="76" rx="3.5" ry="5.5"/><path class="smile" d="M92 92q15 14 30 0"/></g><path class="f cur" d="M200 78l46 20-20 6-6 22z"/><path class="tw" d="M238 34v14M231 41h14"/><path class="tw d1" d="M262 70v8M258 74h8"/><path class="tw d2" d="M30 138v8M26 142h8"/></svg>',
-    '<svg viewBox="0 0 300 150" aria-hidden="true"><g class="clip"><rect class="w" x="70" y="10" width="160" height="132" rx="10"/><rect class="f" x="118" y="4" width="64" height="14" rx="5"/><rect x="88" y="34" width="16" height="16" rx="4"/><path class="ck" pathLength="1" d="M92 42l4 4 7-9"/><path class="ln" pathLength="1" d="M116 42h92"/><rect x="88" y="62" width="16" height="16" rx="4"/><path class="ck c2" pathLength="1" d="M92 70l4 4 7-9"/><path class="ln l2" pathLength="1" d="M116 70h70"/><rect class="wait" x="88" y="90" width="16" height="16" rx="4"/><path class="ln l3" pathLength="1" d="M116 98h80"/><rect x="88" y="118" width="16" height="16" rx="4"/><path class="ln l4" pathLength="1" d="M116 126h56"/></g><path class="tw" d="M252 30v12M246 36h12"/><path class="tw d1" d="M44 100v8M40 104h8"/></svg>',
-    '<svg viewBox="0 0 300 150" aria-hidden="true"><g class="m1"><rect class="f" x="140" y="18" width="130" height="38" rx="12"/><path class="f" d="M256 56l14 12v-12z"/><path class="inv" d="M158 30h74M158 42h46"/></g><g class="m2"><rect class="w" x="30" y="66" width="150" height="38" rx="12"/><path class="w" d="M44 104l-12 14v-14z"/><path d="M46 80h96M46 92h60"/></g><g class="m3"><rect class="w" x="30" y="114" width="64" height="28" rx="12"/><circle class="f td" cx="48" cy="128" r="3.5"/><circle class="f td t2" cx="62" cy="128" r="3.5"/><circle class="f td t3" cx="76" cy="128" r="3.5"/></g><g class="fold"><path class="w" d="M214 98h18l5 6h27v32h-50z"/><path d="M214 110h50"/></g><path class="tw" d="M276 14v10M271 19h10"/><path class="tw d1" d="M24 30v8M20 34h8"/></svg>',
-    '<svg viewBox="0 0 300 150" aria-hidden="true"><circle class="pls" cx="86" cy="76" r="46"/><g class="stp"><circle class="w" cx="86" cy="76" r="46"/><rect class="f" x="68" y="58" width="36" height="36" rx="6"/></g><rect class="w" x="168" y="30" width="96" height="40" rx="8"/><path d="M168 46h96"/><circle class="f" cx="180" cy="38" r="2.5"/><circle class="f" cx="190" cy="38" r="2.5"/><g class="kp"><rect class="w" x="168" y="84" width="40" height="34" rx="8"/><path d="M178 106l8-8 8 8"/></g><g class="kp k2"><rect class="w" x="216" y="84" width="48" height="34" rx="8"/><path d="M228 102h26"/></g><path class="tw" d="M148 22v10M143 27h10"/><path class="tw d1" d="M32 130v8M28 134h8"/></svg>'
-  ];
+  var GUIDE_ART = {
+    hola: '<svg viewBox="0 0 300 150" aria-hidden="true"><rect class="w" x="22" y="14" width="170" height="112" rx="10"/><path d="M22 36h170"/><circle class="f" cx="38" cy="25" r="3.5"/><circle class="f" cx="52" cy="25" r="3.5"/><circle class="f" cx="66" cy="25" r="3.5"/><circle class="ring" cx="107" cy="82" r="32"/><g class="bnc"><circle class="p" cx="107" cy="82" r="32"/><ellipse class="f blk" cx="96" cy="76" rx="3.5" ry="5.5"/><ellipse class="f blk" cx="118" cy="76" rx="3.5" ry="5.5"/><path class="smile" d="M92 92q15 14 30 0"/></g><path class="f cur" d="M200 78l46 20-20 6-6 22z"/><path class="tw" d="M238 34v14M231 41h14"/><path class="tw d1" d="M262 70v8M258 74h8"/><path class="tw d2" d="M30 138v8M26 142h8"/></svg>',
+    pasos: '<svg viewBox="0 0 300 150" aria-hidden="true"><g class="clip"><rect class="w" x="70" y="10" width="160" height="132" rx="10"/><rect class="f" x="118" y="4" width="64" height="14" rx="5"/><rect x="88" y="34" width="16" height="16" rx="4"/><path class="ck" pathLength="1" d="M92 42l4 4 7-9"/><path class="ln" pathLength="1" d="M116 42h92"/><rect x="88" y="62" width="16" height="16" rx="4"/><path class="ck c2" pathLength="1" d="M92 70l4 4 7-9"/><path class="ln l2" pathLength="1" d="M116 70h70"/><rect class="wait" x="88" y="90" width="16" height="16" rx="4"/><path class="ln l3" pathLength="1" d="M116 98h80"/><rect x="88" y="118" width="16" height="16" rx="4"/><path class="ln l4" pathLength="1" d="M116 126h56"/></g><path class="tw" d="M252 30v12M246 36h12"/><path class="tw d1" d="M44 100v8M40 104h8"/></svg>',
+    pedir: '<svg viewBox="0 0 300 150" aria-hidden="true"><g class="m1"><rect class="f" x="140" y="18" width="130" height="38" rx="12"/><path class="f" d="M256 56l14 12v-12z"/><path class="inv" d="M158 30h74M158 42h46"/></g><g class="m2"><rect class="w" x="30" y="66" width="150" height="38" rx="12"/><path class="w" d="M44 104l-12 14v-14z"/><path d="M46 80h96M46 92h60"/></g><g class="m3"><rect class="w" x="30" y="114" width="64" height="28" rx="12"/><circle class="f td" cx="48" cy="128" r="3.5"/><circle class="f td t2" cx="62" cy="128" r="3.5"/><circle class="f td t3" cx="76" cy="128" r="3.5"/></g><g class="fold"><path class="w" d="M214 98h18l5 6h27v32h-50z"/><path d="M214 110h50"/></g><path class="tw" d="M276 14v10M271 19h10"/><path class="tw d1" d="M24 30v8M20 34h8"/></svg>',
+    chats: '<svg viewBox="0 0 300 150" aria-hidden="true"><g class="cd cd3"><rect class="w" x="92" y="22" width="150" height="92" rx="10"/></g><g class="cd cd2"><rect class="w" x="72" y="34" width="150" height="92" rx="10"/></g><g class="cd cd1"><rect class="w" x="52" y="46" width="150" height="92" rx="10"/><path d="M68 66h78M68 80h110M68 94h60"/><circle class="f pin" cx="184" cy="62" r="7"/></g><path class="tw" d="M262 30v12M256 36h12"/><path class="tw d1" d="M30 40v8M26 44h8"/><path class="tw d2" d="M270 112v8M266 116h8"/></svg>',
+    control: '<svg viewBox="0 0 300 150" aria-hidden="true"><circle class="pls" cx="86" cy="76" r="46"/><g class="stp"><circle class="w" cx="86" cy="76" r="46"/><rect class="f" x="68" y="58" width="36" height="36" rx="6"/></g><rect class="w" x="168" y="30" width="96" height="40" rx="8"/><path d="M168 46h96"/><circle class="f" cx="180" cy="38" r="2.5"/><circle class="f" cx="190" cy="38" r="2.5"/><g class="kp"><rect class="w" x="168" y="84" width="40" height="34" rx="8"/><path d="M178 106l8-8 8 8"/></g><g class="kp k2"><rect class="w" x="216" y="84" width="48" height="34" rx="8"/><path d="M228 102h26"/></g><path class="tw" d="M148 22v10M143 27h10"/><path class="tw d1" d="M32 130v8M28 134h8"/></svg>'
+  };
 
   function guideGo(target) {
     if (target === 'observer') {
@@ -615,7 +618,7 @@
     var body = document.getElementById('guide-body');
     body.innerHTML = '';
     var hero = el('div', 'guide-hero');
-    hero.innerHTML = GUIDE_ART[guideIdx] || ''; // contenido fijo del propio código, no del usuario
+    hero.innerHTML = GUIDE_ART[step.id] || ''; // contenido fijo del propio código, no del usuario
     body.appendChild(hero);
     body.appendChild(el('div', 'guide-kick', 'Paso ' + (guideIdx + 1) + ' de ' + G.STEPS.length));
     body.appendChild(el('h3', 'guide-title', step.title));
@@ -707,6 +710,7 @@
       chatInput.disabled = false;
       chatInput.focus();
       loadCost();
+      refreshChatTitle(); // el primer mensaje le pone título a la conversación
       if (result && result.reply) {
         addMessage('assistant', result.reply);
       } else if (result && result.error) {
@@ -748,22 +752,118 @@
     if (e.key === 'Escape' && !thinking.hidden) stopNow();
   });
 
-  // Borrar el historial (del chat y del disco)
-  function clearHistory() {
-    if (!window.confirm('¿Borrar todo el historial del chat? Se elimina de tu Mac y no se puede deshacer.')) return;
-    api.invoke(ch.chatClearHistory).then(function () {
-      messages.innerHTML = '';
-      chatTools.hidden = true;
-      showToast('Historial borrado');
+
+  // ── Conversaciones: tarjetas, fijar, borrar y tope de 20 (la más vieja sin fijar se borra al pasar)
+  var chatTitle = document.getElementById('chat-title');
+  var chatCards = document.getElementById('chat-cards');
+  var activeConv = 0;
+  var warnedLimit = false;
+
+  function relTime(ts) {
+    var m = Math.round((Date.now() - ts) / 60000);
+    if (m < 1) return 'ahora';
+    if (m < 60) return 'hace ' + m + ' min';
+    var h = Math.round(m / 60);
+    if (h < 24) return 'hace ' + h + ' h';
+    var d = Math.round(h / 24);
+    return d === 1 ? 'ayer' : 'hace ' + d + ' días';
+  }
+
+  function refreshChatTitle() {
+    api.invoke(ch.conversationsList).then(function (r) {
+      if (!r) return;
+      activeConv = r.active;
+      var cur = r.items.filter(function (c) { return c.id === r.active; })[0];
+      chatTitle.textContent = (cur && cur.title) || 'Conversación nueva';
+      if (!warnedLimit && r.items.length >= r.warnAt) {
+        warnedLimit = true;
+        showToast('Llevas ' + r.items.length + ' de ' + r.max + ' conversaciones: al llegar al límite se borra la más vieja sin fijar');
+      }
     });
   }
-  document.getElementById('chat-clear').addEventListener('click', clearHistory);
-  document.getElementById('set-clear').addEventListener('click', clearHistory);
+
+  // Vuelve a pintar el chat con la conversación activa
+  function reloadChat() {
+    messages.innerHTML = '';
+    chatTools.hidden = true;
+    api.invoke(ch.chatHistory).then(function (rows) {
+      (rows || []).forEach(function (m) { addMessage(m.role, m.content); });
+    });
+    refreshChatTitle();
+  }
+
+  function loadChats() {
+    api.invoke(ch.conversationsList).then(function (r) {
+      if (!r) return;
+      activeConv = r.active;
+      document.getElementById('chats-count').textContent = r.items.length + ' de ' + r.max;
+      var note = document.getElementById('chats-note');
+      note.hidden = r.items.length < r.warnAt;
+      note.textContent = 'Casi lleno: al crear una más se borra la más vieja que no esté fijada. Fija las que quieras conservar.';
+      chatCards.innerHTML = '';
+      r.items.forEach(function (c) {
+        var card = el('div', 'chat-card' + (c.id === r.active ? ' active' : ''));
+        card.tabIndex = 0;
+        card.setAttribute('role', 'button');
+        var head = el('div', 'chat-card-head');
+        head.appendChild(el('span', 'chat-card-title', c.title || 'Conversación nueva'));
+        if (c.pinned) head.appendChild(el('span', 'chat-card-pin', 'Fijada'));
+        card.appendChild(head);
+        card.appendChild(el('div', 'chat-card-meta', relTime(c.updated) + ' · ' + c.messages + (c.messages === 1 ? ' mensaje' : ' mensajes')));
+        if (c.preview) card.appendChild(el('div', 'chat-card-preview', c.preview));
+        var acts = el('div', 'chat-card-actions');
+        var pin = el('button', 'btn btn-xs', c.pinned ? 'Soltar' : 'Fijar');
+        pin.type = 'button';
+        pin.onclick = function (e) { e.stopPropagation(); api.invoke(ch.conversationPin, { id: c.id, pinned: !c.pinned }).then(loadChats); };
+        var del = el('button', 'btn btn-xs btn-danger', 'Borrar');
+        del.type = 'button';
+        del.onclick = function (e) { e.stopPropagation(); deleteChat(c); };
+        acts.appendChild(pin);
+        acts.appendChild(del);
+        card.appendChild(acts);
+        var open = function () { api.invoke(ch.conversationOpen, c.id).then(function () { reloadChat(); showTab('chat'); }); };
+        card.addEventListener('click', open);
+        card.addEventListener('keydown', function (e) { if (e.key === 'Enter' && e.target === card) open(); });
+        chatCards.appendChild(card);
+      });
+    });
+  }
+
+  function deleteChat(c) {
+    if (!window.confirm('¿Borrar la conversación «' + (c.title || 'sin título') + '»? Se elimina de tu Mac y no se puede deshacer.')) return;
+    api.invoke(ch.conversationDelete, c.id).then(function (r) {
+      if (r && r.activeChanged) reloadChat();
+      showToast('Conversación borrada');
+      if (!viewChats().hidden) loadChats();
+    });
+  }
+  function viewChats() { return document.getElementById('view-chats'); }
+
+  function newChat() {
+    api.invoke(ch.conversationNew).then(function (r) {
+      if (r && r.error) { showToast('Todas tus conversaciones están fijadas: suelta alguna para crear otra'); return; }
+      if (r && r.evicted) showToast('Se borró la conversación más vieja sin fijar (límite de 20)');
+      reloadChat();
+      showTab('chat');
+      chatInput.focus();
+    });
+  }
+  document.getElementById('chats-open').addEventListener('click', function () { showTab('chats'); });
+  document.getElementById('chats-back').addEventListener('click', function () { showTab('chat'); });
+  document.getElementById('chat-new').addEventListener('click', newChat);
+  document.getElementById('chats-new').addEventListener('click', newChat);
+
+  // Borrar esta conversación (botón del chat) o todas (Ajustes), del chat y del disco
+  document.getElementById('chat-clear').addEventListener('click', function () {
+    deleteChat({ id: activeConv, title: chatTitle.textContent });
+  });
+  document.getElementById('set-clear').addEventListener('click', function () {
+    if (!window.confirm('¿Borrar TODAS las conversaciones? Se eliminan de tu Mac y no se puede deshacer.')) return;
+    api.invoke(ch.chatClearHistory).then(function () { reloadChat(); showToast('Conversaciones borradas'); });
+  });
 
   // Al abrir la app, vuelve el historial guardado
-  api.invoke(ch.chatHistory).then(function (rows) {
-    (rows || []).forEach(function (m) { addMessage(m.role, m.content); });
-  });
+  reloadChat();
 
   // Thinking indicator
   api.on(ch.chatThinking, function (on) {
@@ -776,7 +876,7 @@
 
   // Mensajes locales (resumen) y chat nuevo desde atajos
   api.on(ch.chatReply, function (text) { showTab('chat'); addMessage('assistant', text); });
-  api.on(ch.chatClear, function () { messages.innerHTML = ''; chatTools.hidden = true; showTab('chat'); });
+  api.on(ch.chatClear, function () { reloadChat(); showTab('chat'); }); // atajo de conversación nueva
 
   // File edit proposed from AI
   api.on(ch.fileEditProposed, function (edit) {

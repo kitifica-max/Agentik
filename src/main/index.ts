@@ -16,7 +16,10 @@ import { notificationBody, shouldNotify } from './notify.js';
 import { learn, MIN_HABIT_DAYS } from '../memory/insights.js';
 import { abortable } from '../chat/abort.js';
 import { broadFolderReason, sanitizeFolders } from '../shared/paths.js';
-import { saveExchange, loadHistory, modelContext, clearHistory, type ChatKind } from '../chat/history.js';
+import {
+  saveExchange, loadHistory, modelContext, clearHistory, listConversations, newConversation, openConversation,
+  deleteConversation, setPinned, activeConversation, type ChatKind,
+} from '../chat/history.js';
 import { proposeMemory, approveMemory, rejectMemory, deleteMemory, listMemories } from '../memory/memory.js';
 import { SuggestionEngine, type Suggestion } from '../suggestions/engine.js';
 import { dailySummary } from '../summary/daily.js';
@@ -329,6 +332,14 @@ function wipeChat(): number {
   return clearHistory(db);
 }
 
+/** Cambió la conversación activa: corta lo que esté en curso y el modelo retoma solo el contexto de la nueva. */
+function switchedConversation(): void {
+  stopChat();
+  historyEpoch++;
+  ai.clearSession();
+  ai.loadHistory(modelContext(db));
+}
+
 async function handleChat(msg: string, opts: { asAssistant?: boolean } = {}): Promise<{ reply: string; stopped?: boolean }> {
   let flash: CharacterState | null = null; // reacción breve del personaje al terminar
   let notice: { title: string; body: string } | null = null; // aviso nativo si no estás mirando la burbuja
@@ -462,7 +473,13 @@ function registerShortcuts(): void {
     pause: () => observer.togglePause(),
     toggle_bubble: toggleBubble,
     summary: () => { showBubble(); void localSummary().then((t) => bubble?.webContents.send(IPC.chatReply, t)); },
-    new_chat: () => { wipeChat(); showBubble(); bubble?.webContents.send(IPC.chatClear); }, // chat nuevo = historial borrado de verdad
+    new_chat: () => { // conversación nueva: las anteriores se conservan (hasta el tope)
+      const r = newConversation(db);
+      if ('error' in r) { showBubble(); showToastInBubble('Todas tus conversaciones están fijadas: suelta alguna para crear otra'); return; }
+      switchedConversation();
+      showBubble();
+      bubble?.webContents.send(IPC.chatClear);
+    },
   };
   for (const [name, run] of Object.entries(actions)) {
     const accel = config.shortcuts[name as keyof Config['shortcuts']];
@@ -577,6 +594,25 @@ app.whenReady().then(() => {
     chatStop: stopChat,
     chatHistory: () => loadHistory(db),
     chatClearHistory: wipeChat,
+    conversationsList: () => listConversations(db),
+    conversationNew: () => {
+      const r = newConversation(db);
+      if ('error' in r) return r;
+      switchedConversation();
+      return r;
+    },
+    conversationOpen: (id) => {
+      if (!openConversation(db, id)) return { error: 'La conversación ya no existe' };
+      switchedConversation();
+      return { ok: true };
+    },
+    conversationDelete: (id) => {
+      const wasActive = activeConversation(db) === id;
+      if (!deleteConversation(db, id)) return { error: 'La conversación ya no existe' };
+      if (wasActive) switchedConversation();
+      return { ok: true, activeChanged: wasActive };
+    },
+    conversationPin: (id, pinned) => (setPinned(db, id, pinned) ? { ok: true } : { error: 'La conversación ya no existe' }),
     settingsGet: settingsState,
     settingsSet: handleSettingsSet,
   });

@@ -55,9 +55,10 @@ Haz clic en el personaje para abrir la burbuja. Escribe un mensaje y Agentik res
 
 Si le pides que recuerde algo, propone un recuerdo. Solo se guarda si lo apruebas. Datos sensibles (contraseñas, bancarios, salud, API keys) nunca se proponen como recuerdo.
 
-- **El historial se guarda:** si cierras y vuelves a abrir la app, el chat sigue donde lo dejaste (hasta 500 mensajes) y el modelo retoma el hilo.
+- **El historial se guarda:** si cierras y vuelves a abrir la app, el chat sigue donde lo dejaste (hasta 500 mensajes en total) y el modelo retoma el hilo.
+- **Varias conversaciones:** **☰ Chats** muestra tus conversaciones como tarjetas; **+ Nuevo** (o `Ctrl+Opción+N`) empieza una limpia. Guarda hasta **20**: al pasar el límite se borra la más vieja que no esté **fijada** (avisa desde la 18). Cada una tiene su propio contexto para el modelo, así que se gastan menos tokens.
 - **Detener:** mientras Agentik trabaja aparece **Detener** (o pulsa **Esc**). Corta la llamada al modelo y mata el comando que esté corriendo; lo que ya se alcanzó a hacer queda hecho y te lo dice.
-- **Borrar historial:** botón en el chat y en Ajustes (también el atajo de "chat nuevo"). Se elimina de verdad del disco, sin dejar copias en el archivo de la base de datos.
+- **Borrar:** cada conversación se borra desde su tarjeta o con el botón del chat; en Ajustes se borran todas. Se elimina de verdad del disco, sin dejar copias en el archivo de la base de datos.
 
 ## Guía de inicio
 
@@ -193,7 +194,7 @@ En la pestaña **Modelo** eliges con qué modelo trabaja Agentik (el cambio apli
 
 **Cuánto dura**
 - Eventos de actividad: 24 horas por defecto (`retention_hours` en `config.json`). Una tarea horaria borra lo vencido.
-- Historial del chat: los últimos 500 mensajes, hasta que pulses **Borrar historial**.
+- Historial del chat: hasta 20 conversaciones y 500 mensajes en total, hasta que las borres.
 - Resumen de hábitos: 60 días por defecto (`habit_retention_days`, de 7 a 365).
 
 **Cómo borrarlo**

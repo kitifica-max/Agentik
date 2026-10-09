@@ -47,6 +47,11 @@ export interface IpcHandlers {
   chatStop: () => boolean;
   chatHistory: () => unknown;
   chatClearHistory: () => number;
+  conversationsList: () => unknown;
+  conversationNew: () => unknown;
+  conversationOpen: (id: number) => unknown;
+  conversationDelete: (id: number) => unknown;
+  conversationPin: (id: number, pinned: boolean) => unknown;
   settingsGet: () => unknown;
   settingsSet: (p: z.infer<typeof settingsPatch>) => unknown;
 }
@@ -115,6 +120,20 @@ export function registerIpc(h: IpcHandlers): void {
   ipcMain.handle(IPC.chatStop, () => h.chatStop());
   ipcMain.handle(IPC.chatHistory, () => h.chatHistory());
   ipcMain.handle(IPC.chatClearHistory, () => h.chatClearHistory());
+  ipcMain.handle(IPC.conversationsList, () => h.conversationsList());
+  ipcMain.handle(IPC.conversationNew, () => h.conversationNew());
+  ipcMain.handle(IPC.conversationOpen, (_e, raw: unknown) => {
+    const id = memId.safeParse(raw);
+    return id.success ? h.conversationOpen(id.data) : { error: 'ID inválido' };
+  });
+  ipcMain.handle(IPC.conversationDelete, (_e, raw: unknown) => {
+    const id = memId.safeParse(raw);
+    return id.success ? h.conversationDelete(id.data) : { error: 'ID inválido' };
+  });
+  ipcMain.handle(IPC.conversationPin, (_e, raw: unknown) => {
+    const p = z.object({ id: memId, pinned: boolean }).safeParse(raw);
+    return p.success ? h.conversationPin(p.data.id, p.data.pinned) : { error: 'Datos no válidos' };
+  });
   ipcMain.handle(IPC.settingsGet, () => h.settingsGet());
   ipcMain.handle(IPC.settingsSet, (_e, raw: unknown) => {
     const p = settingsPatch.safeParse(raw);

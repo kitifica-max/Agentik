@@ -31,6 +31,11 @@
     </div>
 
     <section id="view-chat" class="view">
+      <div class="chat-bar">
+        <button id="chats-open" class="btn btn-sm" type="button" title="Ver todas tus conversaciones">☰ Chats</button>
+        <span id="chat-title" class="chat-title">Conversación nueva</span>
+        <button id="chat-new" class="btn btn-sm btn-ok" type="button" title="Empezar una conversación limpia (Ctrl+Opción+N)">+ Nuevo</button>
+      </div>
       <div id="messages" class="messages"></div>
       <div class="chat-empty">
         <svg viewBox="0 0 160 110" aria-hidden="true">
@@ -63,7 +68,7 @@
         </div>
       </div>
       <div id="chat-tools" class="chat-tools" hidden>
-        <button id="chat-clear" class="btn btn-xs" type="button" title="Borra el historial del chat de tu Mac">Borrar historial</button>
+        <button id="chat-clear" class="btn btn-xs" type="button" title="Borra esta conversación de tu Mac">Borrar esta conversación</button>
       </div>
       <form id="chat-form" class="chat-form">
         <input id="chat-input" type="text" placeholder="Escribe algo…" autocomplete="off" maxlength="4000" />
@@ -144,7 +149,7 @@
       <div class="section-divider"></div>
       <div class="folders-header"><span class="folders-title">Historial del chat</span></div>
       <p class="muted">El chat se guarda solo en tu Mac (hasta 500 mensajes) para que sigas donde lo dejaste.</p>
-      <div><button id="set-clear" class="btn btn-sm btn-danger" type="button">Borrar historial del chat</button></div>
+      <div><button id="set-clear" class="btn btn-sm btn-danger" type="button">Borrar todas las conversaciones</button></div>
       <div class="section-divider"></div>
       <div class="folders-header"><span class="folders-title">Avisos y sonido</span></div>
       <label class="setting"><input id="set-notif" type="checkbox" /> <span>Notificación de macOS cuando algo termine o falle</span></label>
@@ -154,6 +159,16 @@
       <div class="folders-header"><span class="folders-title">Guía de inicio</span></div>
       <div><button id="set-guide" class="btn btn-sm" type="button">Ver la guía otra vez</button></div>
       <p class="credits">Ilustraciones de los avatares: Designed by Freepik</p>
+    </section>
+
+    <section id="view-chats" class="view view-models" hidden>
+      <div class="folders-header">
+        <span class="folders-title">Conversaciones <span id="chats-count" class="chats-count"></span></span>
+        <button id="chats-new" class="btn btn-sm btn-ok" type="button">+ Nueva</button>
+      </div>
+      <p id="chats-note" class="perm" hidden></p>
+      <div id="chat-cards" class="chat-cards"></div>
+      <div class="file-edit-actions"><button id="chats-back" class="btn btn-sm" type="button">← Volver al chat</button></div>
     </section>
 
     <section id="view-guide" class="view view-models" hidden>
