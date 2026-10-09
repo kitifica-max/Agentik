@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 const IPC = {
   observerStatus: 'observer:status',
@@ -47,6 +47,11 @@ const IPC = {
   conversationOpen: 'conversations:open',
   conversationDelete: 'conversations:delete',
   conversationPin: 'conversations:pin',
+  chatAttachPick: 'chat:attach-pick',
+  chatAttachDrop: 'chat:attach-drop',
+  chatAttachRemove: 'chat:attach-remove',
+  chatAttachList: 'chat:attach-list',
+  chatReveal: 'chat:reveal',
   scriptsList: 'scripts:list',
   scriptPlan: 'scripts:plan',
   scriptRun: 'scripts:run',
@@ -69,6 +74,7 @@ const INVOKE: string[] = [
   IPC.settingsGet, IPC.settingsSet,
   IPC.chatStop, IPC.chatHistory, IPC.chatClearHistory,
   IPC.conversationsList, IPC.conversationNew, IPC.conversationOpen, IPC.conversationDelete, IPC.conversationPin,
+  IPC.chatAttachPick, IPC.chatAttachDrop, IPC.chatAttachRemove, IPC.chatAttachList, IPC.chatReveal,
   IPC.scriptsList, IPC.scriptPlan, IPC.scriptRun, IPC.scriptUndo, IPC.scriptPick, IPC.moduleInstall,
 ];
 const SEND: string[] = [IPC.bubbleToggle, IPC.windowMoveBy, IPC.windowDragEnd, IPC.appQuit];
@@ -76,6 +82,8 @@ const LISTEN: string[] = [IPC.characterState, IPC.observerChanged, IPC.chatReply
 
 contextBridge.exposeInMainWorld('agentik', {
   channels: IPC,
+  /** Ruta real de un archivo soltado en la ventana (el navegador ya no la expone). */
+  pathForFile: (f: File): string => { try { return webUtils.getPathForFile(f); } catch { return ''; } },
   invoke: (channel: string, payload?: unknown) => {
     if (!INVOKE.includes(channel)) throw new Error(`IPC canal no permitido: ${channel}`);
     return ipcRenderer.invoke(channel, payload);

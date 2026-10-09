@@ -127,6 +127,7 @@ html, body {
   padding: 7px 11px;
   border: var(--stroke) solid var(--ink);
   border-radius: 12px;
+  white-space: pre-wrap;
   max-width: 85%;
   word-wrap: break-word;
   line-height: 1.4;
@@ -751,3 +752,16 @@ html, body {
 .run-text { flex: 1; min-width: 0; }
 .run-title { font-weight: 800; font-size: 12px; }
 .run-text .muted { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Adjuntos del chat */
+.chat-attachments { display: flex; flex-wrap: wrap; gap: 4px; max-height: 64px; overflow-y: auto; padding: 2px 4px 2px 2px; }
+.file-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 1px 4px 1px 8px; border: var(--stroke) solid var(--ink); border-radius: 999px; background: var(--paper); font-size: 11px; font-weight: 700; }
+.file-chip-name { min-width: 0; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-chip-size { color: var(--muted); font-weight: 600; }
+.file-chip-x { border: 0; background: none; color: var(--ink); font: inherit; font-size: 15px; line-height: 1; cursor: pointer; padding: 0 4px; border-radius: 999px; }
+.file-chip-x:hover { background: var(--agent-bg); color: var(--agent-ink); }
+.btn-attach { display: grid; place-items: center; padding: 0; width: 34px; height: 34px; border-radius: 50%; flex: none; }
+#view-chat.dragging { outline: 3px dashed var(--ink); outline-offset: -4px; border-radius: 12px; background: color-mix(in srgb, var(--ink) 6%, var(--paper)); }
+#view-chat.dragging::after { content: "Suelta para adjuntar"; position: absolute; inset: 50% 0 auto 0; text-align: center; font-weight: 800; pointer-events: none; }
+#view-chat { position: relative; }
+.msg-action { display: block; margin-top: 6px; }

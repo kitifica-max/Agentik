@@ -46,6 +46,11 @@ export const IPC = {
   conversationOpen: 'conversations:open',
   conversationDelete: 'conversations:delete',
   conversationPin: 'conversations:pin',
+  chatAttachPick: 'chat:attach-pick',
+  chatAttachDrop: 'chat:attach-drop',
+  chatAttachRemove: 'chat:attach-remove',
+  chatAttachList: 'chat:attach-list',
+  chatReveal: 'chat:reveal',
   scriptsList: 'scripts:list',
   scriptPlan: 'scripts:plan',
   scriptRun: 'scripts:run',
@@ -68,6 +73,7 @@ export const INVOKE_CHANNELS: string[] = [
   IPC.settingsGet, IPC.settingsSet,
   IPC.chatStop, IPC.chatHistory, IPC.chatClearHistory,
   IPC.conversationsList, IPC.conversationNew, IPC.conversationOpen, IPC.conversationDelete, IPC.conversationPin,
+  IPC.chatAttachPick, IPC.chatAttachDrop, IPC.chatAttachRemove, IPC.chatAttachList, IPC.chatReveal,
   IPC.scriptsList, IPC.scriptPlan, IPC.scriptRun, IPC.scriptUndo, IPC.scriptPick, IPC.moduleInstall,
 ];
 export const SEND_CHANNELS: string[] = [IPC.bubbleToggle, IPC.windowMoveBy, IPC.windowDragEnd, IPC.appQuit];

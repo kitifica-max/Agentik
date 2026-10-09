@@ -27,7 +27,7 @@
       body: [
         'El botón Scripts (arriba del chat) abre una biblioteca de tareas hechas: duplicados, imágenes por lote, PDFs, facturas, CSV, videos y más.',
         'Todas muestran una vista previa antes de tocar nada, no borran (lo que sobra va a «Revisar» o a la Papelera) y se pueden deshacer.',
-        'No gastan tokens. También puedes pedirlas por chat: «duplicados en Descargas», «organiza Descargas» o «deshaz». Algunas usan módulos opcionales (ffmpeg, voz) que se instalan desde ahí, solo si tú quieres.',
+        'No gastan tokens. También puedes pedirlas por chat: «duplicados en Descargas», «organiza Descargas» o «deshaz». Y puedes adjuntar archivos (el clip, o arrástralos al chat): «une estos pdfs», «limpia el csv», «transcribe esto». Algunas usan módulos opcionales (ffmpeg, voz) que se instalan desde ahí, solo si tú quieres.',
       ],
     },
     {

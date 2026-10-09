@@ -89,6 +89,7 @@
     div.textContent = text;
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
+    return div;
   }
 
   function updateFilesBadge(count) {
@@ -705,9 +706,12 @@
   chatForm.addEventListener('submit', function (e) {
     e.preventDefault();
     var text = chatInput.value.trim();
+    var sentFiles = attachedFiles.slice();
+    if (!text && sentFiles.length) text = 'Revisa los archivos adjuntos.';
     if (!text) return;
     chatInput.value = '';
-    addMessage('user', text);
+    addMessage('user', sentFiles.length ? text + '\n📎 ' + sentFiles.map(function (f) { return f.name; }).join(', ') : text);
+    if (sentFiles.length) { attachedFiles = []; drawAttachments(); }
     chatInput.disabled = true;
     api.invoke(ch.chatSend, text).then(function (result) {
       chatInput.disabled = false;
@@ -715,7 +719,13 @@
       loadCost();
       refreshChatTitle(); // el primer mensaje le pone título a la conversación
       if (result && result.reply) {
-        addMessage('assistant', result.reply);
+        var bubbleEl = addMessage('assistant', result.reply);
+        if (result.attachDir) {
+          var show = el('button', 'btn btn-xs msg-action', 'Mostrar en Finder');
+          show.type = 'button';
+          show.onclick = function () { api.invoke(ch.chatReveal, result.attachDir); };
+          bubbleEl.appendChild(show);
+        }
       } else if (result && result.error) {
         addMessage('assistant', '⚠ ' + result.error);
       }
@@ -756,6 +766,61 @@
   });
 
 
+
+  // ── Adjuntar archivos al chat: botón, arrastrar y soltar. Se copian a una zona interna; los originales no se tocan.
+  var attachedFiles = [];
+  var attachBox = document.getElementById('chat-attachments');
+
+  function fmtBytes(n) { return n < 1024 ? n + ' B' : n < 1048576 ? Math.round(n / 1024) + ' KB' : (n / 1048576).toFixed(1) + ' MB'; }
+
+  function drawAttachments() {
+    attachBox.innerHTML = '';
+    attachBox.hidden = attachedFiles.length === 0;
+    attachedFiles.forEach(function (f) {
+      var chip = el('span', 'file-chip');
+      chip.appendChild(el('span', 'file-chip-name', f.name));
+      chip.appendChild(el('span', 'file-chip-size', fmtBytes(f.size)));
+      var x = el('button', 'file-chip-x', '×');
+      x.type = 'button';
+      x.title = 'Quitar';
+      x.setAttribute('aria-label', 'Quitar ' + f.name);
+      x.onclick = function () {
+        api.invoke(ch.chatAttachRemove, f.id).then(function () { attachedFiles = attachedFiles.filter(function (a) { return a.id !== f.id; }); drawAttachments(); });
+      };
+      chip.appendChild(x);
+      attachBox.appendChild(chip);
+    });
+  }
+
+  function staged(r) {
+    if (!r) return;
+    attachedFiles = attachedFiles.concat(r.files || []);
+    drawAttachments();
+    (r.rejected || []).slice(0, 3).forEach(function (x) { showToast('No adjunté «' + x.name + '»: ' + x.reason); });
+    if ((r.files || []).length) chatInput.focus();
+  }
+
+  function refreshAttachments() {
+    api.invoke(ch.chatAttachList).then(function (list) { attachedFiles = list || []; drawAttachments(); });
+  }
+
+  document.getElementById('chat-attach').addEventListener('click', function () { api.invoke(ch.chatAttachPick).then(staged); });
+
+  // Sin esto, soltar un archivo fuera de la zona del chat haría que la ventana intente abrirlo
+  ['dragover', 'drop'].forEach(function (t) { document.addEventListener(t, function (e) { e.preventDefault(); }); });
+  var dropZone = viewChat;
+  function hasFiles(e) { return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') >= 0; }
+  dropZone.addEventListener('dragenter', function (e) { if (hasFiles(e)) dropZone.classList.add('dragging'); });
+  dropZone.addEventListener('dragover', function (e) { if (hasFiles(e)) { e.preventDefault(); dropZone.classList.add('dragging'); } });
+  dropZone.addEventListener('dragleave', function (e) { if (e.target === dropZone || !dropZone.contains(e.relatedTarget)) dropZone.classList.remove('dragging'); });
+  dropZone.addEventListener('drop', function (e) {
+    dropZone.classList.remove('dragging');
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    var paths = Array.prototype.map.call(e.dataTransfer.files, function (f) { return api.pathForFile(f); }).filter(Boolean);
+    if (paths.length) api.invoke(ch.chatAttachDrop, paths).then(staged);
+  });
+
   // ── Conversaciones: tarjetas, fijar, borrar y tope de 20 (la más vieja sin fijar se borra al pasar)
   var chatTitle = document.getElementById('chat-title');
   var chatCards = document.getElementById('chat-cards');
@@ -793,6 +858,7 @@
       (rows || []).forEach(function (m) { addMessage(m.role, m.content); });
     });
     refreshChatTitle();
+    refreshAttachments();
   }
 
   function loadChats() {

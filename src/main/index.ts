@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, globalShortcut, Notification, safeStorage, screen } from 'electron';
+import { app, BrowserWindow, dialog, globalShortcut, Notification, safeStorage, screen, shell } from 'electron';
 import { join } from 'node:path';
 import type { FSWatcher } from 'chokidar';
 import { openDb, getState, setState, type Db } from '../db/db.js';
@@ -15,7 +15,8 @@ import { SecretStore } from './secrets.js';
 import { notificationBody, shouldNotify } from './notify.js';
 import { learn, MIN_HABIT_DAYS } from '../memory/insights.js';
 import { abortable } from '../chat/abort.js';
-import { broadFolderReason, sanitizeFolders } from '../shared/paths.js';
+import { broadFolderReason, sanitizeFolders, setInternalRoots, isInsideInternalRoot } from '../shared/paths.js';
+import { Attachments, namesLine } from '../chat/attachments.js';
 import { planScript, runScript, undoRun, listScripts, listRuns, type Deps as ScriptDeps } from '../scripts/engine.js';
 import { resolveBin, moduleStatus, installModule } from '../scripts/modules.js';
 import {
@@ -149,6 +150,7 @@ function restartFileWatcher(): void {
 
 // ── Biblioteca de scripts y módulos (ffmpeg, whisper…)
 let modulesDir = '';
+let attachments: Attachments;
 const scriptBin = (name: string): string | null => resolveBin(name, modulesDir);
 const scriptDeps = (): ScriptDeps => ({ db, config, bin: scriptBin });
 
@@ -342,21 +344,25 @@ function wipeChat(): number {
   stopChat();
   historyEpoch++;
   ai.clearSession();
+  attachments.purgeAll();
   return clearHistory(db);
 }
 
 /** Cambió la conversación activa: corta lo que esté en curso y el modelo retoma solo el contexto de la nueva. */
 function switchedConversation(): void {
+  attachments.clearDrafts(); // lo adjuntado y no enviado se descarta al cambiar de conversación
   stopChat();
   historyEpoch++;
   ai.clearSession();
   ai.loadHistory(modelContext(db));
 }
 
-async function handleChat(msg: string, opts: { asAssistant?: boolean } = {}): Promise<{ reply: string; stopped?: boolean }> {
+async function handleChat(msg: string, opts: { asAssistant?: boolean } = {}): Promise<{ reply: string; stopped?: boolean; attachDir?: string }> {
   let flash: CharacterState | null = null; // reacción breve del personaje al terminar
   let notice: { title: string; body: string } | null = null; // aviso nativo si no estás mirando la burbuja
   let record: { reply: string; kind: ChatKind } | null = null; // lo que queda en el historial
+  let shownMsg = msg; // el mensaje tal como se ve en el chat (con los nombres de los adjuntos)
+  let attachDir: string | undefined;
   const epoch = historyEpoch;
   const ctrl = new AbortController();
   const signal = ctrl.signal;
@@ -375,7 +381,9 @@ async function handleChat(msg: string, opts: { asAssistant?: boolean } = {}): Pr
     }
     if (local !== null) { record = { reply: local, kind: 'local' }; notice = { title: 'Kogn', body: local }; return { reply: local }; }
 
-    const result = await ai.chat(msg, signal);
+    const att = attachments.commit(activeConversation(db)); // si hay adjuntos pendientes, viajan con este mensaje
+    if (att) { shownMsg = `${msg}\n${namesLine(att.files)}`; attachDir = att.dir; }
+    const result = await ai.chat(msg, signal, att ?? undefined);
 
     if (result.stopped) {
       record = { reply: result.reply, kind: 'stopped' };
@@ -400,7 +408,7 @@ async function handleChat(msg: string, opts: { asAssistant?: boolean } = {}): Pr
     }
 
     record = { reply: result.reply, kind: 'ai' };
-    return { reply: result.reply };
+    return { reply: result.reply, attachDir };
   } catch (err: unknown) {
     flash = 'confuso';
     const message = err instanceof Error ? err.message : 'Error desconocido';
@@ -412,7 +420,7 @@ async function handleChat(msg: string, opts: { asAssistant?: boolean } = {}): Pr
     if (record && epoch === historyEpoch) {
       // una sugerencia aceptada se ve como mensaje del asistente, no como algo que escribiste
       if (opts.asAssistant) { saveExchange(db, null, msg, record.kind); saveExchange(db, null, record.reply, record.kind); }
-      else saveExchange(db, msg, record.reply, record.kind);
+      else saveExchange(db, shownMsg, record.reply, record.kind);
     }
     // Si la respuesta llega y no estás mirando la burbuja: queda pendiente (pop + salto) hasta que la abras
     if (notice && !lookingAtBubble()) pendingReply = true;
@@ -540,6 +548,9 @@ app.whenReady().then(() => {
   db = openDb(join(app.getPath('userData'), 'agetik.db'));
   backupDir = join(app.getPath('userData'), 'backups');
   modulesDir = join(app.getPath('userData'), 'modules');
+  attachments = new Attachments(join(app.getPath('userData'), 'adjuntos'));
+  setInternalRoots([attachments.root]); // los adjuntos cuentan como zona autorizada para scripts y herramientas
+  attachments.purgeOld(); // fuera lo de hace más de 14 días y los borradores que quedaron sin enviar
   observer = new Observer(db, config, readActiveWindow, pushStatus);
   secrets = new SecretStore(join(app.getPath('userData'), 'secrets.json'), {
     isAvailable: () => safeStorage.isEncryptionAvailable(),
@@ -608,6 +619,15 @@ app.whenReady().then(() => {
     chatStop: stopChat,
     chatHistory: () => loadHistory(db),
     chatClearHistory: wipeChat,
+    chatAttachPick: async () => {
+      const r = await dialog.showOpenDialog({ properties: ['openFile', 'multiSelections'], defaultPath: app.getPath('downloads') });
+      showBubble(); // el diálogo le quita el foco al chat y lo oculta
+      return r.canceled ? { files: [], rejected: [] } : attachments.stage(activeConversation(db), r.filePaths);
+    },
+    chatAttachDrop: (paths) => attachments.stage(activeConversation(db), paths),
+    chatAttachRemove: (id) => attachments.remove(activeConversation(db), id),
+    chatAttachList: () => attachments.list(activeConversation(db)).map(({ id, name, size }) => ({ id, name, size })),
+    chatReveal: (dir) => { if (isInsideInternalRoot(dir)) shell.showItemInFolder(dir); },
     scriptsList: () => ({ scripts: listScripts({ bin: scriptBin }), modules: moduleStatus(modulesDir), runs: listRuns(db, 8) }),
     scriptPlan: (id, params) => planScript(scriptDeps(), id, params),
     scriptRun: (id, params) => runScript(scriptDeps(), id, params),
@@ -632,6 +652,7 @@ app.whenReady().then(() => {
     conversationDelete: (id) => {
       const wasActive = activeConversation(db) === id;
       if (!deleteConversation(db, id)) return { error: 'La conversación ya no existe' };
+      attachments.purgeConversation(id);
       if (wasActive) switchedConversation();
       return { ok: true, activeChanged: wasActive };
     },

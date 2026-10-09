@@ -53,6 +53,11 @@ export interface IpcHandlers {
   conversationOpen: (id: number) => unknown;
   conversationDelete: (id: number) => unknown;
   conversationPin: (id: number, pinned: boolean) => unknown;
+  chatAttachPick: () => Promise<unknown>;
+  chatAttachDrop: (paths: string[]) => unknown;
+  chatAttachRemove: (id: string) => unknown;
+  chatAttachList: () => unknown;
+  chatReveal: (dir: string) => void;
   scriptsList: () => unknown;
   scriptPlan: (id: string, params: Record<string, string | number>) => Promise<unknown>;
   scriptRun: (id: string, params: Record<string, string | number>) => Promise<unknown>;
@@ -136,6 +141,20 @@ export function registerIpc(h: IpcHandlers): void {
   ipcMain.handle(IPC.conversationDelete, (_e, raw: unknown) => {
     const id = memId.safeParse(raw);
     return id.success ? h.conversationDelete(id.data) : { error: 'ID inválido' };
+  });
+  ipcMain.handle(IPC.chatAttachPick, () => h.chatAttachPick());
+  ipcMain.handle(IPC.chatAttachDrop, (_e, raw: unknown) => {
+    const paths = z.array(z.string().min(1).max(2000)).max(50).safeParse(raw);
+    return paths.success ? h.chatAttachDrop(paths.data) : { files: [], rejected: [{ name: '?', reason: 'datos no válidos' }] };
+  });
+  ipcMain.handle(IPC.chatAttachRemove, (_e, raw: unknown) => {
+    const id = z.string().min(1).max(40).safeParse(raw);
+    return id.success ? h.chatAttachRemove(id.data) : false;
+  });
+  ipcMain.handle(IPC.chatAttachList, () => h.chatAttachList());
+  ipcMain.handle(IPC.chatReveal, (_e, raw: unknown) => {
+    const dir = z.string().min(1).max(2000).safeParse(raw);
+    if (dir.success) h.chatReveal(dir.data);
   });
   ipcMain.handle(IPC.scriptsList, () => h.scriptsList());
   ipcMain.handle(IPC.scriptPlan, (_e, raw: unknown) => {
