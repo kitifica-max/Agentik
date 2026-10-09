@@ -2,16 +2,17 @@
 
 Agente personal de escritorio para macOS. Un personaje flotante que hace tareas por ti en tu Mac (organizar archivos, ejecutar comandos), recuerda lo que apruebas y, si tú lo activas, observa en qué trabajas para ayudarte mejor.
 
-Versión actual: **0.2.8**. Solo macOS. Las novedades de cada versión están en [Releases](https://github.com/kitifica-max/Agentik/releases). El agente puede ejecutar comandos y modificar archivos: lee [Seguridad y advertencias](#seguridad-y-advertencias) antes de usarlo.
+Versión actual: **0.2.9**. Solo macOS. Las novedades de cada versión están en [Releases](https://github.com/kitifica-max/Agentik/releases). El agente puede ejecutar comandos y modificar archivos: lee [Seguridad y advertencias](#seguridad-y-advertencias) antes de usarlo.
 
 ## Qué hace
 
 - **Ejecuta tareas** con el modelo que elijas (Claude, una API compatible con OpenAI o un modelo local de Ollama): organiza carpetas, mueve y copia archivos, escribe archivos y corre comandos de shell. Trabaja solo, sin pedirte permiso en cada paso (ver [Seguridad y advertencias](#seguridad-y-advertencias)).
-- **Comandos sin tokens:** unas palabras clave se resuelven en tu Mac, sin llamar al modelo: `resumen` (qué avanzaste hoy), `retoma` (dónde te quedaste en tus proyectos de git), `espacio` (qué ocupa tu disco y qué se puede liberar), `limpia` (borra de forma definitiva solo lo regenerable que mostró `espacio`: cachés y archivos de desarrollo, y vacía la Papelera; únicamente dentro de tu carpeta personal), `gasto` (cuánto llevas gastado) y `aprende` (propone recuerdos de tus proyectos y hábitos).
+- **Comandos sin tokens:** unas palabras clave se resuelven en tu Mac, sin llamar al modelo: `resumen` (qué avanzaste hoy), `retoma` (dónde te quedaste en tus proyectos de git), `espacio` (qué ocupa tu disco y qué se puede liberar), `limpia` (borra de forma definitiva solo lo regenerable que mostró `espacio`: cachés y archivos de desarrollo, y vacía la Papelera; únicamente dentro de tu carpeta personal), `gasto` (cuánto llevas gastado) y `aprende` (propone recuerdos de tus proyectos y hábitos). También `organiza <carpeta autorizada>` (ej. `organiza Descargas`): mueve los archivos por tipo con reglas por defecto, sin modelo.
 - **Observa solo si lo activas** (ver [Activar el observador](#activar-el-observador)).
 - **Recuerda solo lo que apruebas** (pestaña Memoria).
 - **Muestra el gasto** estimado en el pie de la burbuja (los modelos locales cuestan $0).
-- **Estilo line-art:** contornos negros de 2px, sombras duras, barra de ventana retro e ilustraciones en los estados vacíos; claro y oscuro.
+- **Estilo line-art:** contornos negros de 2px, sombras duras, barra de ventana retro e ilustraciones en los estados vacíos; claro y oscuro. Un clic en el avatar abre el chat y otro lo cierra. Burbujas del agente en el mismo gris del avatar.
+- **Menos tokens por turno:** caché de prompt en Anthropic, resultados de herramientas viejos compactados y menor presupuesto de contexto para modelos locales (Ollama).
 
 ## Descargar
 
