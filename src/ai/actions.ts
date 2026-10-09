@@ -5,7 +5,7 @@ import { isSensitiveText } from '../memory/filters.js';
 export const MAX_ACTION_LINES = 5;
 
 /** Herramientas que cambian algo (las de solo lectura no son "acciones" que se puedan deshacer). */
-const MUTATING = new Set(['organize_folder', 'move_files', 'create_folder', 'copy_file', 'write_file', 'run_command']);
+const MUTATING = new Set(['organize_folder', 'move_files', 'create_folder', 'copy_file', 'write_file', 'run_command', 'run_script']);
 
 // Formas típicas de secretos en una línea de comandos (isSensitiveText no las cubre).
 const SECRET_IN_CMD = /\bBearer\b|authorization|\bsk-[\w-]{8,}|\bgh[pousr]_\w{8,}|\bxox[abprs]-|\bAKIA[0-9A-Z]{8,}|(token|secret|passwd|pass|key)\s*[=:]\S|--(password|token|secret)/i;
@@ -20,6 +20,7 @@ const name = (p: unknown): string => (typeof p === 'string' && p ? basename(p) :
 export function actionLine(tool: string, input: Record<string, unknown>, message: string): string | null {
   if (!MUTATING.has(tool)) return null;
   const paths = [input.folder, input.path, input.source, input.destination];
+  if (tool === 'run_script' && input.params && typeof input.params === 'object') paths.push(...Object.values(input.params as Record<string, unknown>));
   if (tool === 'move_files' && Array.isArray(input.moves)) {
     for (const m of input.moves as { source?: unknown; destination?: unknown }[]) paths.push(m?.source, m?.destination);
   }
@@ -33,6 +34,7 @@ export function actionLine(tool: string, input: Record<string, unknown>, message
       const dest = moves[0]?.destination;
       return `move_files → ${first}${typeof dest === 'string' ? ` (a ${basename(dirname(dest))})` : ''}`;
     }
+    case 'run_script': return `run_script ${str(input.id).slice(0, 40)} → ${first}`;
     case 'create_folder': return `create_folder ${name(input.path)}`;
     case 'copy_file': return `copy_file ${name(input.source)} → ${name(input.destination)}`;
     case 'write_file': return `write_file ${name(input.path)}`;

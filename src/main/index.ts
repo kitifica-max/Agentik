@@ -16,6 +16,8 @@ import { notificationBody, shouldNotify } from './notify.js';
 import { learn, MIN_HABIT_DAYS } from '../memory/insights.js';
 import { abortable } from '../chat/abort.js';
 import { broadFolderReason, sanitizeFolders } from '../shared/paths.js';
+import { planScript, runScript, undoRun, listScripts, listRuns, type Deps as ScriptDeps } from '../scripts/engine.js';
+import { resolveBin, moduleStatus, installModule } from '../scripts/modules.js';
 import {
   saveExchange, loadHistory, modelContext, clearHistory, listConversations, newConversation, openConversation,
   deleteConversation, setPinned, activeConversation, type ChatKind,
@@ -143,6 +145,17 @@ function restartFileWatcher(): void {
     fileWatcher = null;
     console.warn('[agentik] no pude iniciar el vigilante:', e instanceof Error ? e.message : e);
   }
+}
+
+// ── Biblioteca de scripts y módulos (ffmpeg, whisper…)
+let modulesDir = '';
+const scriptBin = (name: string): string | null => resolveBin(name, modulesDir);
+const scriptDeps = (): ScriptDeps => ({ db, config, bin: scriptBin });
+
+async function pickPath(kind: 'file' | 'folder'): Promise<string | null> {
+  const r = await dialog.showOpenDialog({ properties: [kind === 'folder' ? 'openDirectory' : 'openFile'], defaultPath: config.allowed_folders[0] });
+  showBubble(); // el cuadro de diálogo le quita el foco al chat y lo oculta
+  return r.canceled || r.filePaths.length === 0 ? null : r.filePaths[0]!;
 }
 
 async function handleAddFolder(): Promise<string[]> {
@@ -526,6 +539,7 @@ app.whenReady().then(() => {
   }
   db = openDb(join(app.getPath('userData'), 'agetik.db'));
   backupDir = join(app.getPath('userData'), 'backups');
+  modulesDir = join(app.getPath('userData'), 'modules');
   observer = new Observer(db, config, readActiveWindow, pushStatus);
   secrets = new SecretStore(join(app.getPath('userData'), 'secrets.json'), {
     isAvailable: () => safeStorage.isEncryptionAvailable(),
@@ -594,6 +608,15 @@ app.whenReady().then(() => {
     chatStop: stopChat,
     chatHistory: () => loadHistory(db),
     chatClearHistory: wipeChat,
+    scriptsList: () => ({ scripts: listScripts({ bin: scriptBin }), modules: moduleStatus(modulesDir), runs: listRuns(db, 8) }),
+    scriptPlan: (id, params) => planScript(scriptDeps(), id, params),
+    scriptRun: (id, params) => runScript(scriptDeps(), id, params),
+    scriptUndo: (runId) => undoRun(scriptDeps(), runId),
+    scriptPick: pickPath,
+    moduleInstall: async (id) => {
+      const r = await installModule(id, { modulesDir, onProgress: (f) => bubble?.webContents.send(IPC.moduleProgress, { id, fraction: f }) });
+      return { ...r, modules: moduleStatus(modulesDir) };
+    },
     conversationsList: () => listConversations(db),
     conversationNew: () => {
       const r = newConversation(db);

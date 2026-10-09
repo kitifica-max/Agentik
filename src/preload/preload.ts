@@ -47,6 +47,13 @@ const IPC = {
   conversationOpen: 'conversations:open',
   conversationDelete: 'conversations:delete',
   conversationPin: 'conversations:pin',
+  scriptsList: 'scripts:list',
+  scriptPlan: 'scripts:plan',
+  scriptRun: 'scripts:run',
+  scriptUndo: 'scripts:undo',
+  scriptPick: 'scripts:pick',
+  moduleInstall: 'modules:install',
+  moduleProgress: 'modules:progress',
   settingsGet: 'settings:get',
   settingsSet: 'settings:set',
   avatarChanged: 'avatar:changed',
@@ -62,9 +69,10 @@ const INVOKE: string[] = [
   IPC.settingsGet, IPC.settingsSet,
   IPC.chatStop, IPC.chatHistory, IPC.chatClearHistory,
   IPC.conversationsList, IPC.conversationNew, IPC.conversationOpen, IPC.conversationDelete, IPC.conversationPin,
+  IPC.scriptsList, IPC.scriptPlan, IPC.scriptRun, IPC.scriptUndo, IPC.scriptPick, IPC.moduleInstall,
 ];
 const SEND: string[] = [IPC.bubbleToggle, IPC.windowMoveBy, IPC.windowDragEnd, IPC.appQuit];
-const LISTEN: string[] = [IPC.characterState, IPC.observerChanged, IPC.chatReply, IPC.chatThinking, IPC.chatClear, IPC.memoryProposed, IPC.memoryRefresh, IPC.avatarChanged, IPC.suggestionShow, IPC.fileEditProposed];
+const LISTEN: string[] = [IPC.characterState, IPC.observerChanged, IPC.chatReply, IPC.chatThinking, IPC.chatClear, IPC.memoryProposed, IPC.memoryRefresh, IPC.avatarChanged, IPC.suggestionShow, IPC.fileEditProposed, IPC.moduleProgress];
 
 contextBridge.exposeInMainWorld('agentik', {
   channels: IPC,

@@ -126,7 +126,7 @@ export async function planScript(deps: Deps, id: string, raw: unknown): Promise<
 }
 
 export type RunOutcome =
-  | { ok: true; runId: number; summary: string; lines: string[]; undoable: boolean }
+  | { ok: true; runId: number; summary: string; lines: string[]; undoable: boolean; ops: number }
   | { ok: false; error: string; runId?: number; undoable?: boolean };
 
 /** Ejecuta: vuelve a planear (el estado pudo cambiar desde la vista previa) y hace solo eso. */
@@ -141,13 +141,14 @@ export async function runScript(deps: Deps, id: string, raw: unknown): Promise<R
 
   const runId = Number(deps.db.prepare('INSERT INTO script_runs (ts, script, summary) VALUES (?, ?, ?)').run(Date.now(), id, '').lastInsertRowid);
   const ctx = makeCtx(deps, runId);
-  const undoable = (): boolean => (deps.db.prepare('SELECT COUNT(*) AS n FROM script_undo WHERE run_id = ?').get(runId) as { n: number }).n > 0;
+  const opCount = (): number => (deps.db.prepare('SELECT COUNT(*) AS n FROM script_undo WHERE run_id = ?').get(runId) as { n: number }).n;
+  const undoable = (): boolean => opCount() > 0;
   try {
     const plan = await def.plan(probe, params.values);
     const res = plan.count === 0 ? { summary: plan.summary, lines: plan.lines } : await def.run(ctx, params.values, plan); // nada que hacer: no se ejecuta
     deps.db.prepare('UPDATE script_runs SET summary = ? WHERE id = ?').run(res.summary, runId);
     logAudit(deps.db, 'script_run', `${id}: ${res.summary}`.slice(0, 500));
-    return { ok: true, runId, summary: res.summary, lines: (res.lines ?? []).slice(0, 40), undoable: undoable() };
+    return { ok: true, runId, summary: res.summary, lines: (res.lines ?? []).slice(0, 40), undoable: undoable(), ops: opCount() };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     deps.db.prepare('UPDATE script_runs SET summary = ? WHERE id = ?').run(`Falló: ${msg}`.slice(0, 300), runId);

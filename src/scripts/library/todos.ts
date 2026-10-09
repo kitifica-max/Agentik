@@ -5,6 +5,43 @@ import { fmtSize, hashFile, headHash, ext, ymd, plural } from './util.js';
 
 const CARPETA = { name: 'carpeta', label: 'Carpeta', type: 'folder' as const, required: true };
 
+// ── Organizar por tipo ───────────────────────────────────────────────────────────────────────
+export const REGLAS_POR_TIPO: [string, string[]][] = [
+  ['Imágenes', ['png', 'jpg', 'jpeg', 'gif', 'heic', 'webp']],
+  ['Documentos', ['pdf', 'docx', 'txt', 'md', 'pages']],
+  ['Hojas', ['xlsx', 'csv', 'numbers']],
+  ['Video', ['mp4', 'mov', 'mkv', 'avi', 'webm', 'm4v']],
+  ['Audio', ['mp3', 'wav', 'm4a', 'flac', 'aac', 'aiff']],
+  ['Comprimidos', ['zip', 'rar', '7z', 'tar', 'gz', 'tgz']],
+  ['Instaladores', ['dmg', 'pkg']],
+];
+
+export const organizarPorTipo: ScriptDef = {
+  id: 'organizar-por-tipo', title: 'Organizar por tipo', group: 'todos', risk: 'mueve',
+  description: 'Ordena los archivos sueltos de una carpeta en Imágenes, Documentos, Hojas, Video, Audio, Comprimidos e Instaladores. Lo que no encaja se queda donde está. Se puede deshacer.',
+  params: [CARPETA],
+  async plan(ctx, p) {
+    const root = String(p.carpeta);
+    const moves: { src: string; dst: string }[] = [];
+    let sinRegla = 0;
+    for (const f of ctx.fs.walk(root, { maxDepth: 1 })) {
+      if (f.isDir) continue;
+      const rule = REGLAS_POR_TIPO.find(([, exts]) => exts.includes(ext(f.name)));
+      if (rule) moves.push({ src: f.path, dst: join(root, rule[0], f.name) }); else sinRegla++;
+    }
+    const groups = new Set(moves.map((m) => m.dst.slice(root.length + 1).split('/')[0])).size;
+    return {
+      summary: moves.length ? `${plural(moves.length, 'archivo', 'archivos')} a ${plural(groups, 'carpeta', 'carpetas')}${sinRegla ? ` (${sinRegla} sin regla se quedan)` : ''}.` : 'No hay archivos sueltos que organizar.',
+      lines: moves.map((m) => `${basename(m.src)} → ${relative(root, m.dst).split('/')[0]}`), count: moves.length, data: { root, moves, groups },
+    };
+  },
+  async run(ctx, _p, plan) {
+    const { root, moves, groups } = plan.data as { root: string; moves: { src: string; dst: string }[]; groups: number };
+    for (const m of moves) ctx.fs.move(m.src, m.dst);
+    return { summary: `Listo, organicé ${basename(root)}: ${moves.length} ${moves.length === 1 ? 'archivo' : 'archivos'} en ${groups} ${groups === 1 ? 'carpeta' : 'carpetas'}.` };
+  },
+};
+
 // ── Duplicados ───────────────────────────────────────────────────────────────────────────────
 export const duplicados: ScriptDef = {
   id: 'duplicados', title: 'Duplicados', group: 'todos', risk: 'mueve',
@@ -250,5 +287,5 @@ export const cerrarPuerto: ScriptDef = {
   },
 };
 
-export const TODOS: ScriptDef[] = [duplicados, pesadosViejos, escanerSecretos, capturas, carpetasVacias, descomprimirZips, puertos, cerrarPuerto];
+export const TODOS: ScriptDef[] = [organizarPorTipo, duplicados, pesadosViejos, escanerSecretos, capturas, carpetasVacias, descomprimirZips, puertos, cerrarPuerto];
 

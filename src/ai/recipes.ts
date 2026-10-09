@@ -5,28 +5,23 @@ import type { Db } from '../db/db.js';
 import type { Config } from '../shared/types.js';
 import { isWithin, broadFolderReason } from '../shared/paths.js';
 import { isSensitivePath } from '../observer/filters.js';
-import { organizeFolder, logAudit } from '../files/fileTools.js';
+import { logAudit } from '../files/fileTools.js';
+import { listScripts, runScript, listRuns, undoRun, findScript, type Deps as ScriptDeps } from '../scripts/engine.js';
 
 // Recetas locales: peticiones frecuentes y sin ambigüedad que se resuelven en la Mac, sin llamar al modelo.
 // Si el texto no encaja exactamente, no hay coincidencia y sigue el flujo normal con el modelo.
 
-export interface RecipeMatch { id: 'organize'; folder: string }
+export type RecipeMatch =
+  | { id: 'script'; script: string; params: Record<string, string> }
+  | { id: 'undo' };
 export interface RecipeResult { reply: string; ops: number; action: string }
-
-export const DEFAULT_RULES = [
-  { extensions: ['png', 'jpg', 'jpeg', 'gif', 'heic', 'webp'], dest: 'Imágenes' },
-  { extensions: ['pdf', 'docx', 'txt', 'md', 'pages'], dest: 'Documentos' },
-  { extensions: ['xlsx', 'csv', 'numbers'], dest: 'Hojas' },
-  { extensions: ['mp4', 'mov', 'mkv', 'avi', 'webm', 'm4v'], dest: 'Video' },
-  { extensions: ['mp3', 'wav', 'm4a', 'flac', 'aac', 'aiff'], dest: 'Audio' },
-  { extensions: ['zip', 'rar', '7z', 'tar', 'gz', 'tgz'], dest: 'Comprimidos' },
-  { extensions: ['dmg', 'pkg'], dest: 'Instaladores' },
-];
+export interface RecipeDeps { db: Db; config: Config; backupDir?: string; bin?: (name: string) => string | null; trashDir?: string }
 
 const ALIAS: Record<string, string> = { descargas: 'downloads', escritorio: 'desktop', documentos: 'documents' };
 const norm = (s: string): string => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
 const ORGANIZE = /^\s*(?:organiza|ordena)(?:me)?\s+(?:(?:por favor|pf)\s+)?(?:(?:mi|mis|la|el|las|los)\s+)?(?:carpeta\s+)?(?:de\s+)?(.+?)(?:\s+(?:por favor|pf))?\s*[.!]*\s*$/i;
+const UNDO = /^\s*(?:deshaz|deshacer|des-?hacer)(?:\s+(?:eso|lo\s+(?:ultimo|anterior)|la\s+ultima(?:\s+tarea)?))?\s*[.!]*\s*$/i;
 
 function isDir(p: string): boolean {
   try { return statSync(p).isDirectory(); } catch { return false; }
@@ -55,22 +50,79 @@ function resolveFolder(target: string, config: Config): string | null {
   return !isSensitivePath(abs) && isDir(abs) ? abs : null;
 }
 
+// Cómo se llama cada script al hablar (además de su id y su título). Solo scripts que no piden nada más que una carpeta.
+const SCRIPT_WORDS: Record<string, string[]> = {
+  'duplicados': ['duplicados', 'archivos duplicados', 'busca duplicados'],
+  'pesados-viejos': ['pesados', 'archivos pesados', 'pesados y viejos'],
+  'escaner-secretos': ['secretos', 'escanea secretos', 'busca secretos', 'escaner de secretos'],
+  'capturas': ['capturas', 'archiva capturas', 'capturas de pantalla'],
+  'carpetas-vacias': ['carpetas vacias', 'busca carpetas vacias'],
+  'descomprimir-zips': ['descomprime', 'descomprime zips', 'descomprimir zips', 'zips'],
+  'renombrar-fecha': ['renombra por fecha', 'renombrar por fecha'],
+  'pdf-unir': ['une pdfs', 'unir pdfs', 'une los pdf'],
+  'facturas': ['facturas', 'ordena facturas'],
+  'puertos': ['puertos', 'puertos en uso'],
+  'repos-estado': ['repos', 'estado de mis repos', 'estado de repos'],
+  'node-modules-viejos': ['node modules viejos', 'limpia node modules'],
+  'env-example': ['env example', 'crea env example'],
+  'docs-a-texto': ['documentos a texto', 'docs a texto'],
+  'video-comprimir': ['comprime videos', 'comprimir videos'],
+  'audio-extraer': ['extrae audio', 'extraer audio'],
+  'imagenes-convertir': ['convierte imagenes', 'convertir imagenes'],
+  'imagenes-redimensionar': ['redimensiona imagenes', 'redimensionar imagenes'],
+};
+
+function scriptMatch(text: string, config: Config): RecipeMatch | null {
+  const t = norm(text).replace(/[.!¡?¿]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const m = /^(?:(?:corre|ejecuta|usa|haz|revisa|busca)\s+)?(?:el script\s+)?(.+?)(?:\s+(?:en|de|sobre|dentro de)\s+(?:la carpeta\s+|mi carpeta\s+|mis\s+|mi\s+|la\s+|el\s+)?(.+))?$/.exec(t);
+  if (!m) return null;
+  const phrase = m[1]!.replace(/^(?:los|las|el|la)\s+/, '');
+  const info = listScripts().find((s) => {
+    const words = [s.id.replace(/-/g, ' '), norm(s.title), ...(SCRIPT_WORDS[s.id] ?? [])];
+    return words.includes(phrase);
+  });
+  if (!info) return null;
+  const onlyFolder = info.params.every((p) => p.name === 'carpeta' || !p.required || p.default !== undefined);
+  if (!onlyFolder) return null;
+  const needsFolder = info.params.some((p) => p.name === 'carpeta');
+  if (!needsFolder) return m[2] ? null : { id: 'script', script: info.id, params: {} };
+  if (!m[2]) return null; // sin carpeta clara: que pregunte el modelo
+  const folder = resolveFolder(m[2], config);
+  return folder ? { id: 'script', script: info.id, params: { carpeta: folder } } : null;
+}
+
 export function matchRecipe(text: string, config: Config): RecipeMatch | null {
   if (typeof text !== 'string' || text.length > 200) return null;
+  if (UNDO.test(text)) return { id: 'undo' };
+  const scr = scriptMatch(text, config);
+  if (scr) return scr;
   const m = ORGANIZE.exec(text);
   if (!m) return null;
   const folder = resolveFolder(m[1]!, config);
-  return folder ? { id: 'organize', folder } : null;
+  return folder ? { id: 'script', script: 'organizar-por-tipo', params: { carpeta: folder } } : null;
 }
 
-export function runRecipe(match: RecipeMatch, db: Db, config: Config, backupDir: string): RecipeResult {
-  const name = basename(match.folder);
-  const r = organizeFolder(db, config, backupDir, match.folder, DEFAULT_RULES, 'none');
-  const groups = Object.keys(r.byDest).length;
-  logAudit(db, 'recipe', `organizar ${match.folder} → ${r.moved} movidos`);
-  const action = `organize_folder ${name} → ${r.moved} movidos`;
-  if (r.moved === 0 && r.errors.length) return { reply: `No pude organizar ${name}: ${r.errors[0]}`, ops: 0, action: '' };
-  if (r.moved === 0) return { reply: `No encontré archivos sueltos que organizar en ${name}.`, ops: 0, action: '' };
-  const left = r.errors.length ? ` ${r.errors.length} quedaron sin mover.` : '';
-  return { reply: `Listo, organicé ${name}: ${r.moved} ${r.moved === 1 ? 'archivo' : 'archivos'} en ${groups} ${groups === 1 ? 'carpeta' : 'carpetas'}.${left}`, ops: r.moved, action };
+/** ¿Hay algo reciente que "deshaz" pueda devolver? Si no, la petición pasa al modelo. */
+export function canUndo(db: Db): boolean { return listRuns(db, 20).some((r) => r.undoable); }
+
+export async function runRecipe(match: RecipeMatch, deps: RecipeDeps): Promise<RecipeResult> {
+  const { db, config } = deps;
+  const sd: ScriptDeps = { db, config, bin: deps.bin, trashDir: deps.trashDir };
+
+  if (match.id === 'undo') {
+    const last = listRuns(db, 20).find((r) => r.undoable);
+    if (!last) return { reply: 'No tengo nada reciente que se pueda deshacer.', ops: 0, action: '' };
+    const r = undoRun(sd, last.id);
+    logAudit(db, 'recipe', `deshacer ${last.script}`);
+    return r.ok
+      ? { reply: `Listo, deshice «${last.title}»: ${r.restored} ${r.restored === 1 ? 'cosa devuelta' : 'cosas devueltas'}${r.skipped ? ` (${r.skipped} no se pudieron devolver)` : ''}.`, ops: r.restored, action: `deshacer ${last.script} → ${r.restored} devueltos` }
+      : { reply: `No pude deshacer: ${r.error}`, ops: 0, action: '' };
+  }
+
+  const def = findScript(match.script);
+  const r = await runScript(sd, match.script, match.params);
+  logAudit(db, 'recipe', `script ${match.script}`);
+  if (!r.ok) return { reply: `No pude: ${r.error}`, ops: 0, action: '' };
+  const hint = r.undoable ? ' Si no te gusta, di «deshaz».' : '';
+  return { reply: `${r.summary}${hint}`, ops: r.ops, action: `${def?.id ?? match.script} → ${r.summary}`.slice(0, 120) };
 }

@@ -11,6 +11,7 @@ const memId = z.number().int().positive();
 const modelSave = profileSchema.partial({ id: true }).extend({ api_key: z.string().max(500).optional() });
 const settingsPatch = z.object({ avatar: z.enum(['nino', 'nina']).optional(), notifications: z.boolean().optional(), sounds: z.boolean().optional(), onboarding_done: z.boolean().optional() });
 const modelId = z.string().min(1).max(60);
+const scriptCall = z.object({ id: z.string().min(1).max(60), params: z.record(z.string().max(40), z.union([z.string().max(1000), z.number().finite()])).default({}) });
 
 const suggestionId = z.string().min(1).max(100);
 
@@ -52,6 +53,12 @@ export interface IpcHandlers {
   conversationOpen: (id: number) => unknown;
   conversationDelete: (id: number) => unknown;
   conversationPin: (id: number, pinned: boolean) => unknown;
+  scriptsList: () => unknown;
+  scriptPlan: (id: string, params: Record<string, string | number>) => Promise<unknown>;
+  scriptRun: (id: string, params: Record<string, string | number>) => Promise<unknown>;
+  scriptUndo: (runId: number) => unknown;
+  scriptPick: (kind: 'file' | 'folder') => Promise<string | null>;
+  moduleInstall: (id: string) => Promise<unknown>;
   settingsGet: () => unknown;
   settingsSet: (p: z.infer<typeof settingsPatch>) => unknown;
 }
@@ -129,6 +136,27 @@ export function registerIpc(h: IpcHandlers): void {
   ipcMain.handle(IPC.conversationDelete, (_e, raw: unknown) => {
     const id = memId.safeParse(raw);
     return id.success ? h.conversationDelete(id.data) : { error: 'ID inválido' };
+  });
+  ipcMain.handle(IPC.scriptsList, () => h.scriptsList());
+  ipcMain.handle(IPC.scriptPlan, (_e, raw: unknown) => {
+    const c = scriptCall.safeParse(raw);
+    return c.success ? h.scriptPlan(c.data.id, c.data.params) : { ok: false, error: 'Datos no válidos' };
+  });
+  ipcMain.handle(IPC.scriptRun, (_e, raw: unknown) => {
+    const c = scriptCall.safeParse(raw);
+    return c.success ? h.scriptRun(c.data.id, c.data.params) : { ok: false, error: 'Datos no válidos' };
+  });
+  ipcMain.handle(IPC.scriptUndo, (_e, raw: unknown) => {
+    const id = memId.safeParse(raw);
+    return id.success ? h.scriptUndo(id.data) : { ok: false, error: 'ID inválido' };
+  });
+  ipcMain.handle(IPC.scriptPick, (_e, raw: unknown) => {
+    const k = z.enum(['file', 'folder']).safeParse(raw);
+    return k.success ? h.scriptPick(k.data) : null;
+  });
+  ipcMain.handle(IPC.moduleInstall, (_e, raw: unknown) => {
+    const id = modelId.safeParse(raw);
+    return id.success ? h.moduleInstall(id.data) : { ok: false, error: 'ID inválido' };
   });
   ipcMain.handle(IPC.conversationPin, (_e, raw: unknown) => {
     const p = z.object({ id: memId, pinned: boolean }).safeParse(raw);
