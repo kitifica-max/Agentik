@@ -111,6 +111,8 @@
   function loadMemories() {
     api.invoke(ch.memoryList).then(function (list) {
       memoryList.innerHTML = '';
+      // Los rechazados no se muestran (en la BD quedan para no volver a proponer el mismo proyecto)
+      list = (list || []).filter(function (m) { return m.estado !== 'rechazado'; });
       var pending = (list || []).filter(function (m) { return m.estado === 'propuesto'; });
       tabMemory.textContent = pending.length > 0 ? 'Memoria (' + pending.length + ')' : 'Memoria';
       tabMemory.classList.toggle('has-badge', pending.length > 0);
