@@ -251,8 +251,16 @@ function createWindows(): void {
   });
   bubble.setAlwaysOnTop(true, 'floating');
   bubble.loadFile(join(__dirname, '../renderer/bubble.html'));
-  bubble.on('blur', () => bubble?.hide());
+  bubble.on('blur', () => { bubbleBlurHiddenAt = Date.now(); bubble?.hide(); });
   bubble.on('show', clearPending); // al abrir el chat termina el aviso
+}
+
+// Hacer clic en el avatar le quita el foco al chat y lo oculta (blur) justo antes de que llegue el clic.
+// Sin esto el clic lo reabriría: así un clic abre y el siguiente cierra.
+let bubbleBlurHiddenAt = 0;
+function toggleBubbleFromAvatar(): void {
+  if (bubble && !bubble.isVisible() && Date.now() - bubbleBlurHiddenAt < 600) return;
+  toggleBubble();
 }
 
 function toggleBubble(): void {
@@ -532,7 +540,7 @@ app.whenReady().then(() => {
     getStatus: () => observer.status(),
     setEnabled: (on) => observer.setEnabled(on),
     togglePause: () => observer.togglePause(),
-    toggleBubble,
+    toggleBubble: toggleBubbleFromAvatar,
     moveBy: (dx, dy) => {
       if (!character) return;
       const [x, y] = character.getPosition();

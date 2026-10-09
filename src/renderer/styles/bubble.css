@@ -570,7 +570,7 @@ html, body {
 
 .avatar-choice:hover { border-color: var(--line); }
 .avatar-choice.selected { border-color: var(--ink); background: var(--pop); color: var(--pop-ink); font-weight: 700; box-shadow: 2px 2px 0 var(--ink); }
-.avatar-choice svg { width: 84px; height: 84px; display: block; }
+.avatar-choice svg { width: 84px; height: 84px; display: block; filter: drop-shadow(3px 3px 0 var(--ink)); }
 
 .setting { display: flex; align-items: flex-start; gap: 8px; margin: 6px 0; font-size: 12px; line-height: 1.35; cursor: pointer; }
 .setting input { margin-top: 2px; }
