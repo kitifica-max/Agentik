@@ -22,6 +22,15 @@
     { id: 'pasos', title: 'Primeros pasos', checklist: true, body: ['Se marcan solos según lo que ya tengas listo.'] },
     { id: 'pedir', title: 'Qué puedes pedirme', examples: true, body: ['Escríbelo como se lo dirías a una persona. Toca un ejemplo para probarlo:'] },
     {
+      id: 'scripts',
+      title: 'Scripts listos',
+      body: [
+        'El botón Scripts (arriba del chat) abre una biblioteca de tareas hechas: duplicados, imágenes por lote, PDFs, facturas, CSV, videos y más.',
+        'Todas muestran una vista previa antes de tocar nada, no borran (lo que sobra va a «Revisar» o a la Papelera) y se pueden deshacer.',
+        'No gastan tokens. También puedes pedirlas por chat: «duplicados en Descargas», «organiza Descargas» o «deshaz». Algunas usan módulos opcionales (ffmpeg, voz) que se instalan desde ahí, solo si tú quieres.',
+      ],
+    },
+    {
       id: 'chats',
       title: 'Varias conversaciones',
       body: [

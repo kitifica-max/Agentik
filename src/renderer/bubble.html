@@ -33,6 +33,7 @@
     <section id="view-chat" class="view">
       <div class="chat-bar">
         <button id="chats-open" class="btn btn-sm" type="button" title="Ver todas tus conversaciones">☰ Chats</button>
+        <button id="scripts-open" class="btn btn-sm" type="button" title="Scripts listos para usar (duplicados, imágenes, PDFs, videos…)">Scripts</button>
         <span id="chat-title" class="chat-title">Conversación nueva</span>
         <button id="chat-new" class="btn btn-sm btn-ok" type="button" title="Empezar una conversación limpia (Ctrl+Opción+N)">+ Nuevo</button>
       </div>
@@ -169,6 +170,22 @@
       <p id="chats-note" class="perm" hidden></p>
       <div id="chat-cards" class="chat-cards"></div>
       <div class="file-edit-actions"><button id="chats-back" class="btn btn-sm" type="button">← Volver al chat</button></div>
+    </section>
+
+    <section id="view-scripts" class="view view-models" hidden>
+      <div class="folders-header">
+        <span class="folders-title">Biblioteca de scripts</span>
+        <button id="scripts-back" class="btn btn-sm" type="button">← Volver al chat</button>
+      </div>
+      <p class="muted">Tareas listas, sin gastar tokens. Todas muestran una vista previa y no borran nada.</p>
+      <div id="script-groups" class="script-groups"></div>
+      <div id="script-list" class="script-list"></div>
+      <div class="section-divider"></div>
+      <div class="folders-header"><span class="folders-title">Módulos opcionales</span></div>
+      <div id="module-list" class="module-list"></div>
+      <div class="section-divider"></div>
+      <div class="folders-header"><span class="folders-title">Últimas ejecuciones</span></div>
+      <div id="run-list" class="run-list"></div>
     </section>
 
     <section id="view-guide" class="view view-models" hidden>

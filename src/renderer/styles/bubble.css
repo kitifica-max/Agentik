@@ -684,6 +684,14 @@ html, body {
 .guide-hero .kp { animation: g-kp 2.4s ease-in-out infinite; }
 .guide-hero .kp.k2 { animation-delay: 1.2s; }
 @keyframes g-kp { 0%, 40%, 100% { transform: translateY(0); } 15% { transform: translateY(3px); } }
+/* scripts: cuatro tarjetas que aparecen una tras otra y una flecha de deshacer que gira */
+.guide-hero .sc { animation: g-sc 4.4s ease-in-out infinite; }
+.guide-hero .sc.s2 { animation-delay: 0.25s; }
+.guide-hero .sc.s3 { animation-delay: 0.5s; }
+.guide-hero .sc.s4 { animation-delay: 0.75s; }
+@keyframes g-sc { 0%, 4% { transform: scale(0.85); opacity: 0; } 14%, 86% { transform: scale(1); opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+.guide-hero .spin { animation: g-spin 3s linear infinite; }
+@keyframes g-spin { to { transform: rotate(-360deg); } }
 /* conversaciones: tres tarjetas que se abanican y una chincheta que cae */
 .guide-hero .cd { animation: g-cd 4s ease-in-out infinite; }
 .guide-hero .cd2 { animation-delay: 0.15s; }
@@ -694,7 +702,7 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   .guide-hero svg * { animation: none !important; }
   .guide-hero .ck, .guide-hero .ln { stroke-dashoffset: 0; }
-  .guide-hero .m1, .guide-hero .m2, .guide-hero .m3 { opacity: 1; transform: none; }
+  .guide-hero .m1, .guide-hero .m2, .guide-hero .m3, .guide-hero .sc { opacity: 1; transform: none; }
 }
 
 /* Conversaciones */
@@ -714,3 +722,32 @@ html, body {
 .chat-card-preview { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-card-actions { display: flex; gap: 4px; justify-content: flex-end; margin-top: 2px; }
 @media (prefers-reduced-motion: reduce) { .chat-card { transition: none; } }
+
+/* Biblioteca de scripts */
+#chat-title { min-width: 0; }
+.script-groups { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 8px; }
+.script-list { display: flex; flex-direction: column; gap: 8px; }
+.script-card { border: var(--stroke) solid var(--ink); border-radius: 12px; padding: 8px 10px; background: var(--paper); box-shadow: 2px 2px 0 var(--ink); display: flex; flex-direction: column; gap: 4px; }
+.script-card.open { background: color-mix(in srgb, var(--ink) 6%, var(--paper)); }
+.script-head { display: flex; align-items: center; gap: 6px; width: 100%; padding: 0; border: 0; background: none; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.script-head:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; border-radius: 6px; }
+.script-title { flex: 1; min-width: 0; font-weight: 800; font-size: 13px; }
+.script-risk { font-size: 10px; font-weight: 800; padding: 0 6px; border: 2px solid var(--ink); border-radius: 999px; white-space: nowrap; }
+.script-risk.risk-lee { background: var(--agent-bg); color: var(--agent-ink); }
+.script-risk.risk-actua { background: var(--ink); color: var(--paper); }
+.script-desc { font-size: 12px; color: var(--muted); line-height: 1.35; }
+.script-missing { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; padding: 4px 6px; border: 2px dashed var(--ink); border-radius: 8px; }
+.script-form { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
+.script-field { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); font-weight: 600; }
+.script-field > span { flex: 1 0 100%; }
+.script-field input, .script-field select { flex: 1; min-width: 0; font: inherit; font-size: 12px; padding: 4px 8px; border: var(--stroke) solid var(--ink); border-radius: 8px; background: var(--paper); color: var(--ink); }
+.script-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.script-out { font-size: 12px; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.script-summary { font-weight: 700; }
+.script-lines { margin: 0; padding: 4px 6px 4px 18px; max-height: 140px; overflow-y: auto; width: 100%; border: var(--stroke) solid var(--ink); border-radius: 8px; font-family: 'SF Mono', Menlo, monospace; font-size: 11px; line-height: 1.5; background: var(--paper); }
+.run-list, .module-list { display: flex; flex-direction: column; gap: 6px; margin: 4px 0; }
+.run-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border: var(--stroke) solid var(--ink); border-radius: 10px; background: var(--paper); }
+.run-row.undone { opacity: 0.55; }
+.run-text { flex: 1; min-width: 0; }
+.run-title { font-weight: 800; font-size: 12px; }
+.run-text .muted { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

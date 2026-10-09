@@ -105,6 +105,7 @@
     viewSettings.hidden = name !== 'settings';
     viewGuide.hidden = name !== 'guide';
     document.getElementById('view-chats').hidden = name !== 'chats';
+    document.getElementById('view-scripts').hidden = name !== 'scripts';
     tabSettings.classList.toggle('active', name === 'settings');
     tabModels.classList.toggle('active', name === 'models');
     tabChat.classList.toggle('active', name === 'chat');
@@ -116,6 +117,7 @@
     if (name === 'settings') loadSettings();
     if (name === 'guide') renderGuide();
     if (name === 'chats') loadChats();
+    if (name === 'scripts') loadScripts();
   }
 
   function loadMemories() {
@@ -590,6 +592,7 @@
     hola: '<svg viewBox="0 0 300 150" aria-hidden="true"><rect class="w" x="22" y="14" width="170" height="112" rx="10"/><path d="M22 36h170"/><circle class="f" cx="38" cy="25" r="3.5"/><circle class="f" cx="52" cy="25" r="3.5"/><circle class="f" cx="66" cy="25" r="3.5"/><circle class="ring" cx="107" cy="82" r="32"/><g class="bnc"><circle class="p" cx="107" cy="82" r="32"/><ellipse class="f blk" cx="96" cy="76" rx="3.5" ry="5.5"/><ellipse class="f blk" cx="118" cy="76" rx="3.5" ry="5.5"/><path class="smile" d="M92 92q15 14 30 0"/></g><path class="f cur" d="M200 78l46 20-20 6-6 22z"/><path class="tw" d="M238 34v14M231 41h14"/><path class="tw d1" d="M262 70v8M258 74h8"/><path class="tw d2" d="M30 138v8M26 142h8"/></svg>',
     pasos: '<svg viewBox="0 0 300 150" aria-hidden="true"><g class="clip"><rect class="w" x="70" y="10" width="160" height="132" rx="10"/><rect class="f" x="118" y="4" width="64" height="14" rx="5"/><rect x="88" y="34" width="16" height="16" rx="4"/><path class="ck" pathLength="1" d="M92 42l4 4 7-9"/><path class="ln" pathLength="1" d="M116 42h92"/><rect x="88" y="62" width="16" height="16" rx="4"/><path class="ck c2" pathLength="1" d="M92 70l4 4 7-9"/><path class="ln l2" pathLength="1" d="M116 70h70"/><rect class="wait" x="88" y="90" width="16" height="16" rx="4"/><path class="ln l3" pathLength="1" d="M116 98h80"/><rect x="88" y="118" width="16" height="16" rx="4"/><path class="ln l4" pathLength="1" d="M116 126h56"/></g><path class="tw" d="M252 30v12M246 36h12"/><path class="tw d1" d="M44 100v8M40 104h8"/></svg>',
     pedir: '<svg viewBox="0 0 300 150" aria-hidden="true"><g class="m1"><rect class="f" x="140" y="18" width="130" height="38" rx="12"/><path class="f" d="M256 56l14 12v-12z"/><path class="inv" d="M158 30h74M158 42h46"/></g><g class="m2"><rect class="w" x="30" y="66" width="150" height="38" rx="12"/><path class="w" d="M44 104l-12 14v-14z"/><path d="M46 80h96M46 92h60"/></g><g class="m3"><rect class="w" x="30" y="114" width="64" height="28" rx="12"/><circle class="f td" cx="48" cy="128" r="3.5"/><circle class="f td t2" cx="62" cy="128" r="3.5"/><circle class="f td t3" cx="76" cy="128" r="3.5"/></g><g class="fold"><path class="w" d="M214 98h18l5 6h27v32h-50z"/><path d="M214 110h50"/></g><path class="tw" d="M276 14v10M271 19h10"/><path class="tw d1" d="M24 30v8M20 34h8"/></svg>',
+    scripts: '<svg viewBox="0 0 300 150" aria-hidden="true"><g class="sc"><rect class="w" x="26" y="16" width="104" height="52" rx="8"/><path d="M38 34h56M38 46h38"/><circle class="f" cx="112" cy="34" r="5"/></g><g class="sc s2"><rect class="w" x="170" y="16" width="104" height="52" rx="8"/><path d="M182 34h56M182 46h38"/><path class="f" d="M254 26l12 8-12 8z"/></g><g class="sc s3"><rect class="w" x="26" y="82" width="104" height="52" rx="8"/><path d="M38 100h56M38 112h38"/><rect x="104" y="96" width="14" height="14" rx="3"/></g><g class="sc s4"><rect class="w" x="170" y="82" width="104" height="52" rx="8"/><path d="M182 100h40M182 112h30"/><g class="spin"><path d="M255 113a11 11 0 1 1-3-8"/><path class="f" d="M248 98l9 1-3 9z"/></g></g><path class="tw" d="M150 70v12M144 76h12"/><path class="tw d1" d="M284 150v0"/></svg>',
     chats: '<svg viewBox="0 0 300 150" aria-hidden="true"><g class="cd cd3"><rect class="w" x="92" y="22" width="150" height="92" rx="10"/></g><g class="cd cd2"><rect class="w" x="72" y="34" width="150" height="92" rx="10"/></g><g class="cd cd1"><rect class="w" x="52" y="46" width="150" height="92" rx="10"/><path d="M68 66h78M68 80h110M68 94h60"/><circle class="f pin" cx="184" cy="62" r="7"/></g><path class="tw" d="M262 30v12M256 36h12"/><path class="tw d1" d="M30 40v8M26 44h8"/><path class="tw d2" d="M270 112v8M266 116h8"/></svg>',
     control: '<svg viewBox="0 0 300 150" aria-hidden="true"><circle class="pls" cx="86" cy="76" r="46"/><g class="stp"><circle class="w" cx="86" cy="76" r="46"/><rect class="f" x="68" y="58" width="36" height="36" rx="6"/></g><rect class="w" x="168" y="30" width="96" height="40" rx="8"/><path d="M168 46h96"/><circle class="f" cx="180" cy="38" r="2.5"/><circle class="f" cx="190" cy="38" r="2.5"/><g class="kp"><rect class="w" x="168" y="84" width="40" height="34" rx="8"/><path d="M178 106l8-8 8 8"/></g><g class="kp k2"><rect class="w" x="216" y="84" width="48" height="34" rx="8"/><path d="M228 102h26"/></g><path class="tw" d="M148 22v10M143 27h10"/><path class="tw d1" d="M32 130v8M28 134h8"/></svg>'
   };
@@ -848,6 +851,208 @@
       chatInput.focus();
     });
   }
+
+  // ── Biblioteca de scripts: tarjetas con parámetros, vista previa, ejecutar y deshacer
+  var GROUPS = [['all', 'Todos'], ['todos', 'General'], ['diseno', 'Diseño y foto'], ['dev', 'Desarrollo'], ['oficina', 'Oficina'], ['contenido', 'Contenido']];
+  var RISK = { lee: 'Solo lee', escribe: 'Crea copias', mueve: 'Mueve archivos', actua: 'Actúa en tu Mac' };
+  var MODULE_FOR = { ffmpeg: 'ffmpeg', 'whisper-cli': 'whisper-cli' };
+  var scriptState = { group: 'all', data: null, folders: [], open: null, busy: false };
+
+  function loadScripts() {
+    Promise.all([api.invoke(ch.scriptsList), api.invoke(ch.configGetFolders)]).then(function (r) {
+      scriptState.data = r[0];
+      scriptState.folders = r[1] || [];
+      drawScripts();
+    });
+  }
+
+  function drawScripts() {
+    var d = scriptState.data;
+    if (!d) return;
+    var groups = document.getElementById('script-groups');
+    groups.innerHTML = '';
+    GROUPS.forEach(function (g) {
+      var b = el('button', 'tab' + (scriptState.group === g[0] ? ' active' : ''), g[1]);
+      b.type = 'button';
+      b.onclick = function () { scriptState.group = g[0]; drawScripts(); };
+      groups.appendChild(b);
+    });
+    var list = document.getElementById('script-list');
+    list.innerHTML = '';
+    d.scripts.filter(function (sc) { return scriptState.group === 'all' || sc.group === scriptState.group; }).forEach(function (sc) { list.appendChild(scriptCard(sc)); });
+    var mods = document.getElementById('module-list');
+    mods.innerHTML = '';
+    d.modules.forEach(function (m) { mods.appendChild(moduleRow(m)); });
+    var runs = document.getElementById('run-list');
+    runs.innerHTML = '';
+    if (!d.runs.length) runs.appendChild(el('p', 'muted', 'Todavía no has ejecutado ningún script.'));
+    d.runs.forEach(function (r) {
+      var row = el('div', 'run-row' + (r.undone ? ' undone' : ''));
+      var t = el('div', 'run-text');
+      t.appendChild(el('div', 'run-title', r.title + (r.undone ? ' (deshecho)' : '')));
+      t.appendChild(el('div', 'muted', relTime(r.ts) + ' · ' + r.summary));
+      row.appendChild(t);
+      if (r.undoable) {
+        var u = el('button', 'btn btn-xs', 'Deshacer');
+        u.type = 'button';
+        u.onclick = function () { undoRunUi(r.id); };
+        row.appendChild(u);
+      }
+      runs.appendChild(row);
+    });
+  }
+
+  function undoRunUi(id) {
+    api.invoke(ch.scriptUndo, id).then(function (r) {
+      showToast(r && r.ok ? 'Deshecho: ' + r.restored + (r.restored === 1 ? ' cosa devuelta' : ' cosas devueltas') : (r && r.error) || 'No se pudo deshacer');
+      loadScripts();
+    });
+  }
+
+  function moduleRow(m) {
+    var row = el('div', 'run-row');
+    var t = el('div', 'run-text');
+    t.appendChild(el('div', 'run-title', m.title));
+    var status = el('div', 'muted', m.installed ? 'Instalado' : m.note + ' (' + m.sizeLabel + ')');
+    status.id = 'mod-' + m.id;
+    t.appendChild(status);
+    row.appendChild(t);
+    if (!m.installed) {
+      var b = el('button', 'btn btn-xs btn-ok', 'Instalar');
+      b.type = 'button';
+      b.onclick = function () { installModuleUi(m.id, b, status); };
+      row.appendChild(b);
+    }
+    return row;
+  }
+
+  function installModuleUi(id, btn, status) {
+    var brew = id === 'ffmpeg' || id === 'whisper-cli';
+    if (brew && !window.confirm('Se instalará con Homebrew (puede tardar varios minutos y descarga varios programas). ¿Continuar?')) return;
+    btn.disabled = true;
+    status.textContent = brew ? 'Instalando con Homebrew… puede tardar varios minutos.' : 'Descargando…';
+    api.invoke(ch.moduleInstall, id).then(function (r) {
+      if (r && r.modules) scriptState.data.modules = r.modules;
+      showToast(r && r.ok ? 'Instalado' : (r && r.error) || 'No se pudo instalar');
+      loadScripts();
+    });
+  }
+  api.on(ch.moduleProgress, function (p) {
+    var s = document.getElementById('mod-' + p.id);
+    if (s) s.textContent = 'Descargando… ' + Math.round(p.fraction * 100) + '%';
+  });
+
+  function scriptCard(sc) {
+    var open = scriptState.open === sc.id;
+    var card = el('div', 'script-card' + (open ? ' open' : ''));
+    var head = el('button', 'script-head');
+    head.type = 'button';
+    head.appendChild(el('span', 'script-title', sc.title));
+    head.appendChild(el('span', 'script-risk risk-' + sc.risk, RISK[sc.risk] || sc.risk));
+    head.onclick = function () { scriptState.open = open ? null : sc.id; drawScripts(); };
+    card.appendChild(head);
+    card.appendChild(el('div', 'script-desc', sc.description));
+    if (!open) return card;
+
+    var missing = sc.missing || [];
+    if (missing.length) {
+      var warn = el('div', 'script-missing');
+      var sys = missing.filter(function (m) { return !MODULE_FOR[m]; });
+      var inst = missing.filter(function (m) { return MODULE_FOR[m]; });
+      warn.appendChild(el('span', '', 'Falta: ' + missing.join(', ') + (sys.length ? ' (viene con macOS o git; revisa tu sistema)' : '')));
+      inst.forEach(function (m) {
+        var b = el('button', 'btn btn-xs btn-ok', 'Instalar ' + m);
+        b.type = 'button';
+        b.onclick = function () { installModuleUi(MODULE_FOR[m], b, warn.firstChild); };
+        warn.appendChild(b);
+      });
+      card.appendChild(warn);
+    }
+
+    var form = el('div', 'script-form');
+    var fields = {};
+    sc.params.forEach(function (p) {
+      var lab = el('label', 'script-field');
+      lab.appendChild(el('span', '', p.label + (p.required ? ' *' : '')));
+      var input;
+      if (p.type === 'choice') {
+        input = document.createElement('select');
+        (p.options || []).forEach(function (o) { var op = document.createElement('option'); op.value = o; op.textContent = o; input.appendChild(op); });
+        if (p.default !== undefined) input.value = String(p.default);
+      } else {
+        input = document.createElement('input');
+        input.type = p.type === 'number' ? 'number' : 'text';
+        if (p.type === 'number') { if (p.min !== undefined) input.min = p.min; if (p.max !== undefined) input.max = p.max; }
+        if (p.default !== undefined) input.value = String(p.default);
+        if (p.type === 'folder' && scriptState.folders.length === 1 && !input.value) input.value = scriptState.folders[0];
+        if (p.type === 'folder') input.placeholder = 'Una de tus carpetas autorizadas';
+      }
+      fields[p.name] = input;
+      lab.appendChild(input);
+      if (p.type === 'folder' || p.type === 'file') {
+        var pick = el('button', 'btn btn-xs', 'Elegir…');
+        pick.type = 'button';
+        pick.onclick = function () { api.invoke(ch.scriptPick, p.type).then(function (path) { if (path) input.value = path; }); };
+        lab.appendChild(pick);
+      }
+      form.appendChild(lab);
+    });
+    var out = el('div', 'script-out');
+    var acts = el('div', 'script-actions');
+    var prev = el('button', 'btn btn-sm', 'Vista previa');
+    prev.type = 'button';
+    var run = el('button', 'btn btn-sm btn-ok', 'Ejecutar');
+    run.type = 'button';
+    run.hidden = true;
+    acts.appendChild(prev);
+    acts.appendChild(run);
+    form.appendChild(acts);
+    card.appendChild(form);
+    card.appendChild(out);
+
+    function values() {
+      var v = {};
+      sc.params.forEach(function (p) { var x = fields[p.name].value; if (x !== '') v[p.name] = p.type === 'number' ? Number(x) : x; });
+      return v;
+    }
+    function show(summary, lines, extra) {
+      out.innerHTML = '';
+      out.appendChild(el('div', 'script-summary', summary));
+      if (lines && lines.length) { var ul = el('ul', 'script-lines'); lines.forEach(function (l) { ul.appendChild(el('li', '', l)); }); out.appendChild(ul); }
+      if (extra) out.appendChild(extra);
+    }
+    prev.onclick = function () {
+      run.hidden = true;
+      show('Mirando…');
+      api.invoke(ch.scriptPlan, { id: sc.id, params: values() }).then(function (r) {
+        if (!r || !r.ok) { show('⚠ ' + ((r && r.error) || 'No se pudo')); return; }
+        show(r.plan.summary, r.plan.lines);
+        run.hidden = !(r.plan.count > 0 && sc.risk !== 'lee');
+      });
+    };
+    run.onclick = function () {
+      run.disabled = true; prev.disabled = true;
+      show('Trabajando…');
+      api.invoke(ch.scriptRun, { id: sc.id, params: values() }).then(function (r) {
+        run.disabled = false; prev.disabled = false; run.hidden = true;
+        if (!r || !r.ok) { show('⚠ ' + ((r && r.error) || 'No se pudo'), null, r && r.undoable ? undoButton(r.runId) : null); return; }
+        show(r.summary, r.lines, r.undoable ? undoButton(r.runId) : null);
+        api.invoke(ch.scriptsList).then(function (d) { scriptState.data.runs = d.runs; });
+      });
+    };
+    function undoButton(id) {
+      var b = el('button', 'btn btn-sm', 'Deshacer');
+      b.type = 'button';
+      b.onclick = function () { undoRunUi(id); out.innerHTML = ''; };
+      return b;
+    }
+    if (sc.risk === 'lee' && !sc.params.some(function (p) { return p.required && !fields[p.name].value; })) { /* se puede ver con un clic */ }
+    return card;
+  }
+
+  document.getElementById('scripts-open').addEventListener('click', function () { showTab('scripts'); });
+  document.getElementById('scripts-back').addEventListener('click', function () { showTab('chat'); });
+
   document.getElementById('chats-open').addEventListener('click', function () { showTab('chats'); });
   document.getElementById('chats-back').addEventListener('click', function () { showTab('chat'); });
   document.getElementById('chat-new').addEventListener('click', newChat);

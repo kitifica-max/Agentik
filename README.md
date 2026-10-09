@@ -60,6 +60,12 @@ Si le pides que recuerde algo, propone un recuerdo. Solo se guarda si lo aprueba
 - **Detener:** mientras Agentik trabaja aparece **Detener** (o pulsa **Esc**). Corta la llamada al modelo y mata el comando que esté corriendo; lo que ya se alcanzó a hacer queda hecho y te lo dice.
 - **Borrar:** cada conversación se borra desde su tarjeta o con el botón del chat; en Ajustes se borran todas. Se elimina de verdad del disco, sin dejar copias en el archivo de la base de datos.
 
+## Biblioteca de scripts
+
+el botón **Scripts** (arriba del chat) abre tareas ya hechas, sin gastar tokens: organizar por tipo, duplicados, pesados y viejos, escáner de secretos, capturas, carpetas vacías, descomprimir zips, convertir y redimensionar imágenes, renombrar por fecha, unir y dividir PDFs, ordenar facturas, limpiar CSV, documentos a texto, Atajos de macOS, comprimir videos, extraer audio, transcribir (Whisper local) y GIFs; y para desarrollo: puertos, `node_modules` viejos, `.env.example` y estado de repos. Todas muestran una **vista previa**, **no borran nada** (lo que sobra va a «Revisar» o a la Papelera) y se pueden **deshacer** (también con el chat: «deshaz»). El modelo puede usarlas como herramientas (`list_scripts`, `run_script`) y varias se piden directo: «duplicados en Descargas».
+
+**Módulos opcionales:** `ffmpeg` y `whisper.cpp` se instalan con Homebrew solo si tú lo pides (botón Instalar); los modelos de voz se descargan de Hugging Face y se verifican con SHA-256. Esos programas corren dentro de un sandbox de macOS: sin red y escribiendo solo en su carpeta de salida.
+
 ## Guía de inicio
 
 La primera vez que abres Agentik aparece una guía de 4 pasos: qué es, primeros pasos (modelo, carpeta, observador, primer mensaje; se marcan solos), ejemplos para probar y cómo mantener el control. Se puede saltar. Vuelve a abrirla con el botón **?** de la burbuja o desde **Ajustes**.
