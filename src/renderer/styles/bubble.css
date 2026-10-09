@@ -5,6 +5,8 @@
   --pop: #e4e4e4;
   --pop-ink: #141414;
   --stroke: 2px;
+  --agent-bg: #e6e6e6; /* el mismo gris del círculo del avatar, en claro y oscuro */
+  --agent-ink: #141414;
   --accent: #141414;
   --warn: #8a5a00;
   --muted: #6b6b6b;
@@ -140,7 +142,8 @@ html, body {
 
 .msg-assistant {
   align-self: flex-start;
-  background: var(--assistant-bg);
+  background: var(--agent-bg);
+  color: var(--agent-ink);
   border-bottom-left-radius: 3px;
   box-shadow: 2px 2px 0 var(--ink);
 }
