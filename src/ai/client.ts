@@ -1,4 +1,4 @@
-import { readdirSync, statSync, readFileSync } from 'node:fs';
+import { readdirSync, statSync, openSync, readSync, closeSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
 import { isWithin, broadFolderReason } from '../shared/paths.js';
 import type { Db } from '../db/db.js';
@@ -16,6 +16,23 @@ import { homedir } from 'node:os';
 
 const MAX_TOKENS = 8192;
 const MAX_TOOL_ROUNDS = 40;
+
+/** Presupuesto de contexto: los modelos locales (ollama) tienen ventana pequeña, así que reciben menos. */
+export interface Budget { readBytes: number; listEntries: number }
+export function budgetFor(profile: Pick<ModelProfile, 'provider'>): Budget {
+  return profile.provider === 'ollama' ? { readBytes: 3072, listEntries: 30 } : { readBytes: 10240, listEntries: 100 };
+}
+
+/** Lee hasta `max` bytes; si el archivo es más largo, corta y añade "(truncado)". */
+function readCapped(path: string, max: number): string {
+  const fd = openSync(path, 'r');
+  try {
+    const buf = Buffer.alloc(max + 1);
+    const n = readSync(fd, buf, 0, max + 1, 0);
+    if (n <= max) return buf.subarray(0, n).toString('utf8');
+    return buf.subarray(0, max).toString('utf8').replace(/\uFFFD+$/, '') + '\n(truncado)';
+  } finally { closeSync(fd); }
+}
 
 const SYSTEM_PROMPT = `Eres Agentik, agente de escritorio autónomo en el Mac del usuario. Haces tareas reales con tus herramientas, sin pedir permiso.
 
@@ -148,7 +165,7 @@ const TOOLS: ToolDef[] = [
   },
   {
     name: 'read_file',
-    description: 'Leer contenido de un archivo (max 10KB).',
+    description: 'Leer contenido de un archivo (se trunca si es largo).',
     input_schema: {
       type: 'object' as const,
       properties: { path: { type: 'string', description: 'Ruta absoluta' } },
@@ -201,12 +218,12 @@ function listFolder(root: string, maxDepth: number, cap: number, detail: boolean
   return { lines, truncated };
 }
 
-function allowedFoldersListing(config: Config): string {
+function allowedFoldersListing(config: Config, maxEntries: number): string {
   if (config.allowed_folders.length === 0) return '';
   const parts: string[] = ['Carpetas autorizadas (usa list_folder para ver todo con tamaño y fecha):'];
   for (const folder of config.allowed_folders) {
     const abs = resolve(folder);
-    const { lines, truncated } = listFolder(abs, 1, 100, false);
+    const { lines, truncated } = listFolder(abs, 1, maxEntries, false);
     parts.push(`\n📁 ${abs}`);
     parts.push(...lines);
     if (truncated > 0) parts.push(`(+${truncated} más)`);
@@ -246,7 +263,7 @@ export class AiClient {
     this.sessionHistory = messages.slice(-30);
   }
 
-  private async executeTool(name: string, input: Record<string, unknown>, signal?: AbortSignal): Promise<{ success: boolean; message: string; ops?: number }> {
+  private async executeTool(name: string, input: Record<string, unknown>, budget: Budget, signal?: AbortSignal): Promise<{ success: boolean; message: string; ops?: number }> {
     const op = (r: { success: boolean; message: string }) => ({ ...r, ops: r.success ? 1 : 0 });
     switch (name) {
       case 'create_folder':
@@ -305,8 +322,7 @@ export class AiClient {
         if (!isInsideAllowed(this.config, p)) return { success: false, message: 'Fuera de carpetas autorizadas' };
         if (isSensitivePath(p)) return { success: false, message: 'Archivo sensible' };
         try {
-          const content = readFileSync(p, 'utf8');
-          return { success: true, message: content.slice(0, 10240) };
+          return { success: true, message: readCapped(p, budget.readBytes) };
         } catch (e) {
           return { success: false, message: `No se pudo leer: ${e instanceof Error ? e.message : e}` };
         }
@@ -317,6 +333,8 @@ export class AiClient {
   }
 
   async chat(userMessage: string, signal?: AbortSignal): Promise<ChatResult> {
+    const { provider, profile } = this.resolveModel();
+    const budget = budgetFor(profile);
     const contextParts: string[] = [];
 
     const eventSummary = recentEventsSummary(this.db);
@@ -329,7 +347,7 @@ export class AiClient {
       }
     }
 
-    const folderListing = allowedFoldersListing(this.config);
+    const folderListing = allowedFoldersListing(this.config, budget.listEntries);
     if (folderListing) contextParts.push(folderListing);
 
     // Estático (no cambia entre mensajes: se cachea en Anthropic) + dinámico (eventos, recuerdos, carpetas).
@@ -339,7 +357,6 @@ export class AiClient {
 
     this.sessionHistory.push({ role: 'user', content: userMessage });
 
-    const { provider, profile } = this.resolveModel();
     const price = profilePrice(profile);
     const apiMessages: Msg[] = this.sessionHistory.map(m => ({
       role: m.role as 'user' | 'assistant',
@@ -387,7 +404,7 @@ export class AiClient {
 
         let result: { success: boolean; message: string; ops?: number };
         try {
-          result = await this.executeTool(tu.name, input, signal);
+          result = await this.executeTool(tu.name, input, budget, signal);
         } catch (e) {
           result = { success: false, message: `Error interno: ${e instanceof Error ? e.message : String(e)}` };
         }

@@ -130,6 +130,31 @@ describe('bucle del agente con cualquier proveedor', () => {
     expect(ids('tool_result')).toEqual(ids('tool_use'));
   });
 
+  it('presupuesto: read_file y el listado de carpetas son más cortos con modelos locales que con la nube', async () => {
+    const big = 'a'.repeat(20000);
+    writeFileSync(join(allowed, 'grande.txt'), big);
+    for (let i = 0; i < 120; i++) writeFileSync(join(allowed, `f${String(i).padStart(3, '0')}.txt`), '');
+    const readCall = () => step('', [{ id: 'r', name: 'read_file', input: { path: join(allowed, 'grande.txt') } }]);
+    const run = async (profile: ModelProfile) => {
+      const s = script([readCall(), step('ok')]);
+      await client(memoryDb(), () => ({ provider: s.provider, profile })).chat('lee');
+      const out = (s.requests[1]!.messages.at(-1)!.content as any[])[0].content as string;
+      const dyn = s.requests[0]!.systemParts!.dynamic;
+      return { out, dyn };
+    };
+    const l = await run(local);
+    expect(l.out).toBe('a'.repeat(3072) + '\n(truncado)');
+    expect(l.dyn).toMatch(/\(\+\d+ más\)/);
+    expect(l.dyn.split('\n').filter((x) => x.endsWith('.txt')).length).toBe(30);
+    const c = await run(paid);
+    expect(c.out).toBe('a'.repeat(10240) + '\n(truncado)');
+    expect(c.dyn.split('\n').filter((x) => x.endsWith('.txt')).length).toBe(100);
+    writeFileSync(join(allowed, 'chico.txt'), 'corto');
+    const s2 = script([step('', [{ id: 'r', name: 'read_file', input: { path: join(allowed, 'chico.txt') } }]), step('ok')]);
+    await client(memoryDb(), () => ({ provider: s2.provider, profile: local })).chat('lee');
+    expect((s2.requests[1]!.messages.at(-1)!.content as any[])[0].content).toBe('corto'); // sin "(truncado)" si cabe
+  });
+
   it('se detiene en el límite de rondas y lo avisa', async () => {
     const db = memoryDb();
     const loop = step('', [{ id: 'x', name: 'list_folder', input: { path: allowed } }]);
