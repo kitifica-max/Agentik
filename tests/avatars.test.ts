@@ -77,8 +77,8 @@ describe('definiciones de avatar', () => {
   it('el círculo (contenedor) no lleva datos de animación: queda fijo', () => {
     const svg = new FakeEl('svg'); Avatars.build(svg, 'nina');
     const circles = svg.children.filter((e) => e.tag === 'circle');
-    expect(circles).toHaveLength(1);
-    expect(circles[0]!.attrs['data-av']).toBeUndefined();
+    expect(circles).toHaveLength(2); // contenedor + aro de contorno
+    for (const c of circles) expect(c.attrs['data-av']).toBeUndefined();
   });
 });
 

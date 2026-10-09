@@ -105,6 +105,8 @@
     for (const side of ['L', 'R']) el('path', Object.assign({ 'data-av': `lid${side}`, d: 'M0 0', 'stroke-width': 1.5 }, line), face);
     for (const side of ['L', 'R']) el('ellipse', { 'data-av': `pupil${side}`, cx: 0, cy: 0, rx: 1.9, ry: 2, fill: INK }, face);
     el('path', { 'data-av': 'mouth', d: 'M0 0', fill: INK, stroke: INK, 'stroke-width': 1.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, face);
+    // contorno del mismo grosor que la interfaz (2px en pantalla, sin escalar con el viewBox)
+    el('circle', { cx: 81.5, cy: 81.5, r: 80.3, fill: 'none', stroke: INK, 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke' }, svg);
     return svg;
   }
 
