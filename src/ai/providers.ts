@@ -12,7 +12,9 @@ export type Block =
 export interface Msg { role: 'user' | 'assistant'; content: string | Block[] }
 export interface ToolCall { id: string; name: string; input: Record<string, unknown> }
 
-export interface ChatRequest { system: string; tools: ToolDef[]; messages: Msg[]; maxTokens: number; signal?: AbortSignal }
+/** system = texto completo (OpenAI/Ollama lo usan tal cual). systemParts separa lo estático (cacheable) de lo dinámico. */
+export interface SystemParts { static: string; dynamic: string }
+export interface ChatRequest { system: string; systemParts?: SystemParts; tools: ToolDef[]; messages: Msg[]; maxTokens: number; signal?: AbortSignal }
 export interface LlmResult {
   text: string;
   toolCalls: ToolCall[];
@@ -54,11 +56,20 @@ export class AnthropicProvider implements Provider {
   }
 
   async chat(req: ChatRequest): Promise<LlmResult> {
+    // Caché de prompt: herramientas + bloque estático se cachean; lo dinámico (eventos, recuerdos, carpetas) va después, sin caché.
+    const cached = { type: 'ephemeral' } as const;
+    const system: string | Anthropic.TextBlockParam[] = req.systemParts
+      ? [
+          { type: 'text', text: req.systemParts.static, cache_control: cached },
+          ...(req.systemParts.dynamic ? [{ type: 'text' as const, text: req.systemParts.dynamic }] : []),
+        ]
+      : req.system;
+    const tools = req.tools.map((t, i) => (i === req.tools.length - 1 ? { ...t, cache_control: cached } : t));
     const res = await this.client.messages.create({
       model: this.model,
       max_tokens: req.maxTokens,
-      system: req.system,
-      tools: req.tools as Anthropic.Tool[],
+      system,
+      tools: tools as Anthropic.Tool[],
       messages: req.messages as Anthropic.MessageParam[],
     }, req.signal ? { signal: req.signal } : undefined);
     let text = '';

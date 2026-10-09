@@ -142,6 +142,30 @@ describe('Anthropic y fábrica', () => {
     expect(r.usage).toEqual({ input_tokens: 3, output_tokens: 4 });
   });
 
+  it('caché de prompt: system en bloques (estático con cache_control, dinámico sin él) y cache_control en la última herramienta', async () => {
+    let params: any;
+    const client = { messages: { create: async (p: any) => { params = p; return { content: [], stop_reason: 'end_turn', usage: { input_tokens: 1, output_tokens: 1 } }; } } };
+    const tools: ToolDef[] = [TOOLS[0]!, { ...TOOLS[0]!, name: 'otra' }];
+    await new AnthropicProvider('claude-x', 'k', client as any).chat({ system: 'EST\n\nDIN', systemParts: { static: 'EST', dynamic: 'DIN' }, tools, messages: [], maxTokens: 10 });
+    expect(params.system).toEqual([{ type: 'text', text: 'EST', cache_control: { type: 'ephemeral' } }, { type: 'text', text: 'DIN' }]);
+    expect(params.tools[0].cache_control).toBeUndefined();
+    expect(params.tools[1].cache_control).toEqual({ type: 'ephemeral' });
+    expect(tools[1]!.cache_control).toBeUndefined(); // no muta la definición original
+    // sin parte dinámica: un solo bloque
+    await new AnthropicProvider('claude-x', 'k', client as any).chat({ system: 'EST', systemParts: { static: 'EST', dynamic: '' }, tools: [], messages: [], maxTokens: 10 });
+    expect(params.system).toHaveLength(1);
+    // sin systemParts sigue siendo un string
+    await new AnthropicProvider('claude-x', 'k', client as any).chat({ system: 'S', tools: [], messages: [], maxTokens: 10 });
+    expect(params.system).toBe('S');
+  });
+
+  it('OpenAI y Ollama usan el texto completo (system) aunque lleguen systemParts', async () => {
+    const f = fakeFetch({ body: { choices: [{ message: { content: 'x' } }] } });
+    const p: ModelProfile = { id: 'o', label: 'o', provider: 'openai', model: 'm' };
+    await new OpenAiProvider(p, undefined, f.impl).chat({ system: 'EST\n\nDIN', systemParts: { static: 'EST', dynamic: 'DIN' }, tools: [], messages: [], maxTokens: 5 });
+    expect(JSON.parse(f.calls[0]!.init.body).messages[0]).toEqual({ role: 'system', content: 'EST\n\nDIN' });
+  });
+
   it('la fábrica elige el proveedor; Anthropic sin clave da un error accionable', () => {
     const base = { id: 'a', label: 'Claude', model: 'm' } as const;
     expect(createProvider({ ...base, provider: 'ollama' }, undefined)).toBeInstanceOf(OllamaProvider);

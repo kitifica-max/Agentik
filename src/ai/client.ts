@@ -331,9 +331,10 @@ export class AiClient {
     const folderListing = allowedFoldersListing(this.config);
     if (folderListing) contextParts.push(folderListing);
 
-    const system = contextParts.length > 0
-      ? SYSTEM_PROMPT + '\n\n' + contextParts.join('\n\n')
-      : SYSTEM_PROMPT;
+    // Estático (no cambia entre mensajes: se cachea en Anthropic) + dinámico (eventos, recuerdos, carpetas).
+    const dynamic = contextParts.join('\n\n');
+    const systemParts = { static: SYSTEM_PROMPT, dynamic };
+    const system = dynamic ? SYSTEM_PROMPT + '\n\n' + dynamic : SYSTEM_PROMPT;
 
     this.sessionHistory.push({ role: 'user', content: userMessage });
 
@@ -354,7 +355,7 @@ export class AiClient {
       if (signal?.aborted) { stopped = true; break; }
       let res: LlmResult;
       try {
-        res = await provider.chat({ system, tools: TOOLS, messages: apiMessages, maxTokens: MAX_TOKENS, signal });
+        res = await provider.chat({ system, systemParts, tools: TOOLS, messages: apiMessages, maxTokens: MAX_TOKENS, signal });
       } catch (e) {
         if (signal?.aborted) { stopped = true; break; } // cortar la llamada lanza un error: no es un fallo
         throw e;

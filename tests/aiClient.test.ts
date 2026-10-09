@@ -97,6 +97,21 @@ describe('bucle del agente con cualquier proveedor', () => {
     await expect(ai.chat('hola')).rejects.toThrow(/pestaña Modelo/);
   });
 
+  it('el bloque estático del system es idéntico entre llamadas aunque cambie lo dinámico (cacheable)', async () => {
+    const db = memoryDb();
+    const a = script([step('uno')]);
+    const ai = new AiClient(db, { ...cfg, allowed_folders: [allowed], memory_enabled: false }, join(base, 'backups'), () => ({ provider: a.provider, profile: local }));
+    await ai.chat('hola');
+    writeFileSync(join(allowed, 'nuevo.txt'), 'x'); // cambia el listado de carpetas (dinámico)
+    await ai.chat('otra vez');
+    const [r1, r2] = a.requests;
+    expect(r1!.systemParts!.static).toBe(r2!.systemParts!.static);
+    expect(r1!.systemParts!.static).toContain('Agentik');
+    expect(r1!.systemParts!.dynamic).not.toBe(r2!.systemParts!.dynamic);
+    expect(r1!.system).toBe(r1!.systemParts!.static + '\n\n' + r1!.systemParts!.dynamic);
+    expect(JSON.stringify(r1!.tools)).toBe(JSON.stringify(r2!.tools));
+  });
+
   it('se detiene en el límite de rondas y lo avisa', async () => {
     const db = memoryDb();
     const loop = step('', [{ id: 'x', name: 'list_folder', input: { path: allowed } }]);
