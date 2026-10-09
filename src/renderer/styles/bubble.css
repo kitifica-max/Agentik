@@ -765,3 +765,7 @@ html, body {
 #view-chat.dragging::after { content: "Suelta para adjuntar"; position: absolute; inset: 50% 0 auto 0; text-align: center; font-weight: 800; pointer-events: none; }
 #view-chat { position: relative; }
 .msg-action { display: block; margin-top: 6px; }
+
+/* Formato de las respuestas */
+.msg strong { font-weight: 800; }
+.msg code { font-family: 'SF Mono', Menlo, monospace; font-size: 12px; padding: 0 4px; border: 1.5px solid currentColor; border-radius: 4px; }

@@ -82,11 +82,24 @@
   var chatTools = document.getElementById('chat-tools');
   var chatStop = document.getElementById('chat-stop');
 
+  // Respuestas del agente con **negrita**, `código` y viñetas, armadas con nodos de texto (nunca HTML)
+  function fillRich(div, text) {
+    window.AgentikRichText.parse(text).forEach(function (spans, i) {
+      if (i > 0) div.appendChild(document.createTextNode('\n'));
+      spans.forEach(function (sp) {
+        if (sp.t === 'text') { div.appendChild(document.createTextNode(sp.s)); return; }
+        var node = document.createElement(sp.t === 'b' ? 'strong' : 'code');
+        node.textContent = sp.s;
+        div.appendChild(node);
+      });
+    });
+  }
+
   function addMessage(role, text) {
     chatTools.hidden = false; // hay historial: se puede borrar
     var div = document.createElement('div');
     div.className = 'msg msg-' + role;
-    div.textContent = text;
+    if (role === 'assistant') fillRich(div, text); else div.textContent = text;
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
     return div;
