@@ -492,7 +492,7 @@ html, body {
 [hidden] { display: none !important; }
 
 /* Modelos */
-.view-models { overflow-y: auto; }
+.view-models { overflow-y: auto; padding: 0 4px 4px 0; } /* deja sitio a las sombras duras, que si no el scroll las corta */
 
 .model-list { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
 
