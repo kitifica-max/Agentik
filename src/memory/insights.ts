@@ -6,7 +6,7 @@ import type { Memory, MemoryTipo } from '../shared/types.js';
 import { findRepos, repoInfo } from '../git/git.js';
 import { proposeMemory } from './memory.js';
 
-// Recuerdos que Agentik APRENDE solo, pero únicamente los PROPONE: se guardan si tú los apruebas.
+// Recuerdos que Kogn APRENDE solo, pero únicamente los PROPONE: se guardan si tú los apruebas.
 // `fuente` es la clave para no volver a proponer lo mismo (ni lo que rechazaste).
 export interface Insight { fuente: string; tipo: MemoryTipo; contenido: string }
 

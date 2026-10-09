@@ -3,8 +3,8 @@ import { createWriteStream, existsSync, mkdirSync, renameSync, rmSync } from 'no
 import { execFile } from 'node:child_process';
 import { join } from 'node:path';
 
-// Herramientas externas que algunos scripts necesitan. Se buscan primero en la carpeta de módulos de Agentik y luego en el sistema
-// (Homebrew incluido). Instalar un módulo es siempre una acción explícita tuya: Agentik no baja nada por su cuenta.
+// Herramientas externas que algunos scripts necesitan. Se buscan primero en la carpeta de módulos de Kogn y luego en el sistema
+// (Homebrew incluido). Instalar un módulo es siempre una acción explícita tuya: Kogn no baja nada por su cuenta.
 const SYSTEM_DIRS = ['/usr/bin', '/bin', '/usr/sbin', '/sbin', '/opt/homebrew/bin', '/usr/local/bin'];
 const WHISPER_MODELS = { base: 'ggml-base.bin', tiny: 'ggml-tiny.bin' } as const;
 

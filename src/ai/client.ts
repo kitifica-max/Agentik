@@ -37,7 +37,7 @@ function readCapped(path: string, max: number): string {
   } finally { closeSync(fd); }
 }
 
-const SYSTEM_PROMPT = `Eres Agentik, agente de escritorio autónomo en el Mac del usuario. Haces tareas reales con tus herramientas, sin pedir permiso.
+const SYSTEM_PROMPT = `Eres Kogn, agente de escritorio autónomo en el Mac del usuario. Haces tareas reales con tus herramientas, sin pedir permiso.
 
 REGLAS:
 1. Directo: instrucción → ejecutas. Sin plática ni confirmar lo obvio. Español.

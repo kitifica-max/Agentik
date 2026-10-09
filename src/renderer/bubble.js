@@ -745,7 +745,7 @@
     }
   });
 
-  // Detener lo que Agentik esté haciendo (también con Esc)
+  // Detener lo que Kogn esté haciendo (también con Esc)
   function stopNow() {
     chatStop.disabled = true;
     api.invoke(ch.chatStop).then(function () { chatStop.disabled = false; });
@@ -1076,7 +1076,7 @@
     if (on) messages.scrollTop = messages.scrollHeight;
   });
 
-  // Agentik propuso recuerdos por su cuenta (proyectos y hábitos): actualiza la lista y el contador
+  // Kogn propuso recuerdos por su cuenta (proyectos y hábitos): actualiza la lista y el contador
   api.on(ch.memoryRefresh, function () { loadMemories(); });
 
   // Mensajes locales (resumen) y chat nuevo desde atajos

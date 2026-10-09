@@ -10,4 +10,4 @@ Se modificaron: se separaron en capas (cabeza y torso), se les superpuso una car
 
 ## Software
 
-Agentik usa, entre otros, Electron, better-sqlite3, chokidar, zod y el SDK de Anthropic, todos con licencias MIT o Apache-2.0.
+Kogn usa, entre otros, Electron, better-sqlite3, chokidar, zod y el SDK de Anthropic, todos con licencias MIT o Apache-2.0.

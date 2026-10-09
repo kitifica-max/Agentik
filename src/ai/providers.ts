@@ -193,7 +193,7 @@ export class OllamaProvider implements Provider {
       }, req.signal);
     } catch (e) {
       if (e instanceof HttpError && e.status === 400 && /tools/i.test(e.body)) {
-        throw new Error(`El modelo "${this.p.model}" no soporta herramientas, y Agentik las necesita. Prueba con uno que sí (qwen3, llama3.1, mistral-nemo...).`);
+        throw new Error(`El modelo "${this.p.model}" no soporta herramientas, y Kogn las necesita. Prueba con uno que sí (qwen3, llama3.1, mistral-nemo...).`);
       }
       if (e instanceof HttpError && e.status === 404) {
         throw new Error(`Ollama no tiene el modelo "${this.p.model}". Descárgalo con: ollama pull ${this.p.model}`);

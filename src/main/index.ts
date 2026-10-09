@@ -172,7 +172,7 @@ async function handleAddFolder(): Promise<string[]> {
       type: 'warning',
       title: 'Carpeta demasiado amplia',
       message: 'No agregué esa carpeta',
-      detail: `${rejected.join('\n')}\n\nAutorizar una carpeta le da a Agentik permiso para leer, mover y escribir ahí, y para vigilar todo lo que cambie. Elige una carpeta concreta, como Descargas, Documentos o la de un proyecto.`,
+      detail: `${rejected.join('\n')}\n\nAutorizar una carpeta le da a Kogn permiso para leer, mover y escribir ahí, y para vigilar todo lo que cambie. Elige una carpeta concreta, como Descargas, Documentos o la de un proyecto.`,
     });
   }
   saveConfig(config);
@@ -373,7 +373,7 @@ async function handleChat(msg: string, opts: { asAssistant?: boolean } = {}): Pr
       if (signal.aborted) { record = { reply: 'Detenido.', kind: 'stopped' }; return { reply: 'Detenido.', stopped: true }; }
       throw e;
     }
-    if (local !== null) { record = { reply: local, kind: 'local' }; notice = { title: 'Agentik', body: local }; return { reply: local }; }
+    if (local !== null) { record = { reply: local, kind: 'local' }; notice = { title: 'Kogn', body: local }; return { reply: local }; }
 
     const result = await ai.chat(msg, signal);
 
@@ -393,7 +393,7 @@ async function handleChat(msg: string, opts: { asAssistant?: boolean } = {}): Pr
     }
 
     if (result.opsExecuted > 0) flash = 'exito';
-    notice = { title: result.opsExecuted > 0 ? 'Agentik: tarea lista' : 'Agentik', body: result.reply };
+    notice = { title: result.opsExecuted > 0 ? 'Kogn: tarea lista' : 'Kogn', body: result.reply };
 
     if (result.opsExecuted > 0) {
       showToastInBubble(`${result.opsExecuted} operaciones ejecutadas`);
@@ -404,7 +404,7 @@ async function handleChat(msg: string, opts: { asAssistant?: boolean } = {}): Pr
   } catch (err: unknown) {
     flash = 'confuso';
     const message = err instanceof Error ? err.message : 'Error desconocido';
-    notice = { title: 'Agentik: algo falló', body: message };
+    notice = { title: 'Kogn: algo falló', body: message };
     record = { reply: `Error: ${message}`, kind: 'error' };
     return { reply: `Error: ${message}` };
   } finally {
@@ -452,7 +452,7 @@ async function runLearning(): Promise<{ created: Memory[]; habitDays: number }> 
     if (r.created.length) {
       bubble?.webContents.send(IPC.memoryRefresh);
       const n = r.created.length;
-      notify('Agentik aprendió algo de ti', `${n} ${n === 1 ? 'recuerdo nuevo espera' : 'recuerdos nuevos esperan'} tu aprobación en la pestaña Memoria.`);
+      notify('Kogn aprendió algo de ti', `${n} ${n === 1 ? 'recuerdo nuevo espera' : 'recuerdos nuevos esperan'} tu aprobación en la pestaña Memoria.`);
     }
     return r;
   } finally {
@@ -562,7 +562,7 @@ app.whenReady().then(() => {
     void dialog.showMessageBox({
       type: 'warning',
       title: 'Quité una carpeta demasiado amplia',
-      message: 'Agentik quitó carpetas autorizadas que eran peligrosas',
+      message: 'Kogn quitó carpetas autorizadas que eran peligrosas',
       detail: `${cleaned.removed.map((r) => `• ${r.path}: ${r.reason}`).join('\n')}\n\nPuedes agregar carpetas concretas en la pestaña Archivos.`,
     });
   }

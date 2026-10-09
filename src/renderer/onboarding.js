@@ -12,7 +12,7 @@
   const STEPS = [
     {
       id: 'hola',
-      title: 'Hola, soy Agentik',
+      title: 'Hola, soy Kogn',
       body: [
         'Soy un personaje que vive en tu pantalla. Haz clic en mí para abrir o cerrar este chat, y arrástrame para moverme.',
         'Puedo organizar tus archivos, ejecutar tareas en tu Mac, recordar lo que me pidas y avisarte cuando termine algo.',

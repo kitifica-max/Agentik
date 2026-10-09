@@ -47,7 +47,7 @@ describe('bucle del agente con cualquier proveedor', () => {
     const msgs = requests[1]!.messages;
     expect(msgs[msgs.length - 1]).toMatchObject({ role: 'user', content: [{ type: 'tool_result', tool_use_id: 'c1', is_error: false }] });
     expect(requests[0]!.tools.map((t) => t.name)).toContain('organize_folder');
-    expect(requests[0]!.system).toContain('Agentik');
+    expect(requests[0]!.system).toContain('Kogn');
   });
 
   it('los errores de herramienta vuelven al modelo sin romper el bucle (rutas sensibles, argumentos faltantes, herramientas inventadas)', async () => {
@@ -106,7 +106,7 @@ describe('bucle del agente con cualquier proveedor', () => {
     await ai.chat('otra vez');
     const [r1, r2] = a.requests;
     expect(r1!.systemParts!.static).toBe(r2!.systemParts!.static);
-    expect(r1!.systemParts!.static).toContain('Agentik');
+    expect(r1!.systemParts!.static).toContain('Kogn');
     expect(r1!.systemParts!.dynamic).not.toBe(r2!.systemParts!.dynamic);
     expect(r1!.system).toBe(r1!.systemParts!.static + '\n\n' + r1!.systemParts!.dynamic);
     expect(JSON.stringify(r1!.tools)).toBe(JSON.stringify(r2!.tools));

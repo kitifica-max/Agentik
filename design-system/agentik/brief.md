@@ -1,4 +1,4 @@
-# Agentik — Design System Brief
+# Kogn — Design System Brief
 
 Fuentes: 3 ilustraciones line-art de referencia (ventanas retro, estrellitas, cursor, globos, stickers) + board Pinterest compartido (~247 pins; UI de apps con acento gris/amarillo neón sobre negro/blanco).
 

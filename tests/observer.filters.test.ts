@@ -15,7 +15,7 @@ describe('filtros de ventana', () => {
   });
 
   it('deja pasar ventanas normales', () => {
-    expect(isExcludedWindow(cfg, 'Visual Studio Code', 'observer.ts — Agentik')).toBe(false);
+    expect(isExcludedWindow(cfg, 'Visual Studio Code', 'observer.ts — Kogn')).toBe(false);
   });
 });
 

@@ -1,4 +1,4 @@
-# Agentik
+# Kogn
 
 Agente personal de escritorio para macOS. Un personaje flotante que hace tareas por ti en tu Mac (organizar archivos, ejecutar comandos), recuerda lo que apruebas y, si tú lo activas, observa en qué trabajas para ayudarte mejor.
 
@@ -16,10 +16,10 @@ Versión actual: **0.2.10**. Solo macOS. Las novedades de cada versión están e
 
 ## Descargar
 
-Los instaladores van publicados por versión en **[Releases](https://github.com/kitifica-max/Agentik/releases)**. Descarga el `.dmg` más reciente, ábrelo y arrastra **Agentik** a Aplicaciones. Cada versión indica su suma de verificación (SHA-256).
+Los instaladores van publicados por versión en **[Releases](https://github.com/kitifica-max/Agentik/releases)**. Descarga el `.dmg` más reciente, ábrelo y arrastra **Kogn** a Aplicaciones. Cada versión indica su suma de verificación (SHA-256).
 
 > **La app no está notarizada por Apple** (eso requiere una cuenta de desarrollador de pago), así que macOS la bloquea la primera vez. Para abrirla, una de dos:
-> 1. En Terminal: `xattr -cr /Applications/Agentik.app` y ábrela normal.
+> 1. En Terminal: `xattr -cr /Applications/Kogn.app` y ábrela normal.
 > 2. Intenta abrirla, luego **Ajustes del Sistema → Privacidad y seguridad → Abrir de todos modos**.
 >
 > Si dice que está "dañada", es ese mismo bloqueo (o un `.dmg` descargado a medias): usa el comando de arriba. Antes de usarla lee [Seguridad y advertencias](#seguridad-y-advertencias).
@@ -41,8 +41,8 @@ Requisitos: macOS 13+, Node 22+.
 
 ```bash
 npm version patch                 # sube la versión en package.json (minor/major según el cambio) y crea el tag
-npm run build                     # genera release/Agentik-<versión>-*.dmg
-gh release create v<versión> release/Agentik-<versión>*.dmg --generate-notes
+npm run build                     # genera release/Kogn-<versión>-*.dmg
+gh release create v<versión> release/Kogn-<versión>*.dmg --generate-notes
 ```
 
 ## Configuración de la API key
@@ -51,13 +51,13 @@ No hay archivos `.env`: la clave se configura **dentro de la app**, en la pesta�
 
 ## Chat
 
-Haz clic en el personaje para abrir la burbuja. Escribe un mensaje y Agentik responde usando el modelo activo (pestaña Modelo) con contexto de tu actividad reciente (apps, archivos modificados) y recuerdos aprobados.
+Haz clic en el personaje para abrir la burbuja. Escribe un mensaje y Kogn responde usando el modelo activo (pestaña Modelo) con contexto de tu actividad reciente (apps, archivos modificados) y recuerdos aprobados.
 
 Si le pides que recuerde algo, propone un recuerdo. Solo se guarda si lo apruebas. Datos sensibles (contraseñas, bancarios, salud, API keys) nunca se proponen como recuerdo.
 
 - **El historial se guarda:** si cierras y vuelves a abrir la app, el chat sigue donde lo dejaste (hasta 500 mensajes en total) y el modelo retoma el hilo.
 - **Varias conversaciones:** **☰ Chats** muestra tus conversaciones como tarjetas; **+ Nuevo** (o `Ctrl+Opción+N`) empieza una limpia. Guarda hasta **20**: al pasar el límite se borra la más vieja que no esté **fijada** (avisa desde la 18). Cada una tiene su propio contexto para el modelo, así que se gastan menos tokens.
-- **Detener:** mientras Agentik trabaja aparece **Detener** (o pulsa **Esc**). Corta la llamada al modelo y mata el comando que esté corriendo; lo que ya se alcanzó a hacer queda hecho y te lo dice.
+- **Detener:** mientras Kogn trabaja aparece **Detener** (o pulsa **Esc**). Corta la llamada al modelo y mata el comando que esté corriendo; lo que ya se alcanzó a hacer queda hecho y te lo dice.
 - **Borrar:** cada conversación se borra desde su tarjeta o con el botón del chat; en Ajustes se borran todas. Se elimina de verdad del disco, sin dejar copias en el archivo de la base de datos.
 
 ## Biblioteca de scripts
@@ -68,7 +68,7 @@ el botón **Scripts** (arriba del chat) abre tareas ya hechas, sin gastar tokens
 
 ## Guía de inicio
 
-La primera vez que abres Agentik aparece una guía de 4 pasos: qué es, primeros pasos (modelo, carpeta, observador, primer mensaje; se marcan solos), ejemplos para probar y cómo mantener el control. Se puede saltar. Vuelve a abrirla con el botón **?** de la burbuja o desde **Ajustes**.
+La primera vez que abres Kogn aparece una guía de 4 pasos: qué es, primeros pasos (modelo, carpeta, observador, primer mensaje; se marcan solos), ejemplos para probar y cómo mantener el control. Se puede saltar. Vuelve a abrirla con el botón **?** de la burbuja o desde **Ajustes**.
 
 ## Memoria
 
@@ -76,7 +76,7 @@ La pestaña **Memoria** en la burbuja muestra todos los recuerdos: propuestos, a
 
 ## Sugerencias proactivas
 
-Agentik observa patrones de actividad y sugiere ayuda cuando detecta algo relevante. El personaje cambia a estado `con-sugerencia` (sonrisa + rebote + insignia `!`).
+Kogn observa patrones de actividad y sugiere ayuda cuando detecta algo relevante. El personaje cambia a estado `con-sugerencia` (sonrisa + rebote + insignia `!`).
 
 **Niveles** (`suggestion_level` en `config.json`):
 
@@ -107,10 +107,10 @@ El agente organiza y modifica archivos **dentro de las carpetas autorizadas** (p
 
 ## Permisos de macOS
 
-- **Accesibilidad**: necesario para leer el título de la ventana activa. Sin él, Agentik solo ve el nombre de la app. Ajustes del Sistema → Privacidad y seguridad → Accesibilidad → activa Agentik.
+- **Accesibilidad**: necesario para leer el título de la ventana activa. Sin él, Kogn solo ve el nombre de la app. Ajustes del Sistema → Privacidad y seguridad → Accesibilidad → activa Kogn.
 - **Automatización (System Events)**: macOS puede pedirlo al primer uso.
-- **Grabación de pantalla**: Agentik no la usa.
-- **Acceso a carpetas**: Agentik solo vigila las carpetas que tú agregues desde la app.
+- **Grabación de pantalla**: Kogn no la usa.
+- **Acceso a carpetas**: Kogn solo vigila las carpetas que tú agregues desde la app.
 
 La app detecta permisos faltantes y lo indica en la burbuja.
 
@@ -141,7 +141,7 @@ El círculo es solo el contenedor y no se mueve; lleva un contorno de 2px como e
 | pausado | `sleeping` | ojos cerrados, respira lento, atenuado |
 | (por API) | `speaking`, `empathy` | habla con la boca, parpadea más; cejas internas arriba |
 
-**Respuesta pendiente:** si Agentik termina una respuesta y no estás mirando la burbuja, el personaje hace un "pop" (sintetizado, sin archivos de audio) y salta hasta que abres el chat. El sonido y el salto se pueden apagar en Ajustes. Con "reducir movimiento" de macOS no salta, pero sigue la insignia.
+**Respuesta pendiente:** si Kogn termina una respuesta y no estás mirando la burbuja, el personaje hace un "pop" (sintetizado, sin archivos de audio) y salta hasta que abres el chat. El sonido y el salto se pueden apagar en Ajustes. Con "reducir movimiento" de macOS no salta, pero sigue la insignia.
 
 API: `setAvatarState(state)`, `triggerGesture(name)` (`nod`, `tilt`, `frown`, `baton`, `wink`, `shrug`, `smile_pop`, `look_around`, `bounce`, `jump`, `surprise`...) y `startAudioSync(audio)`. Hay una demo con selector de avatar en `tools/avatar-demo.html` (`python3 -m http.server 8765` y abrir `/tools/avatar-demo.html`).
 
@@ -149,11 +149,11 @@ Respeta "reducir movimiento" de macOS.
 
 ## Avisos
 
-Cuando termina o falla algo y **no estás mirando la burbuja** (la tarea con modelo lento, un error de la API), Agentik manda una notificación nativa de macOS. Al hacer clic abre la burbuja. Si estás viendo la burbuja no avisa. Se desactivan en **Ajustes** (o con `"notifications": false` en `config.json`). Con el sonido activado la notificación va en silencio: el "pop" del personaje es el aviso.
+Cuando termina o falla algo y **no estás mirando la burbuja** (la tarea con modelo lento, un error de la API), Kogn manda una notificación nativa de macOS. Al hacer clic abre la burbuja. Si estás viendo la burbuja no avisa. Se desactivan en **Ajustes** (o con `"notifications": false` en `config.json`). Con el sonido activado la notificación va en silencio: el "pop" del personaje es el aviso.
 
 ## Memoria de proyectos y hábitos
 
-Agentik aprende de ti, pero **solo propone**: nada se guarda hasta que lo apruebas en la pestaña **Memoria** (hay botones de aprobar o rechazar todo y un contador de pendientes).
+Kogn aprende de ti, pero **solo propone**: nada se guarda hasta que lo apruebas en la pestaña **Memoria** (hay botones de aprobar o rechazar todo y un contador de pendientes).
 
 - **Proyectos:** detecta tus repos de git con actividad en los últimos 30 días y propone un recuerdo por proyecto (ruta, descripción y stack: Next.js, Electron, Python...). Un proyecto se propone una sola vez, aunque lo rechaces.
 - **Hábitos:** las apps que más usas y tus horas de mayor actividad. Necesitan al menos 3 días con el observador activo.
@@ -161,7 +161,7 @@ Agentik aprende de ti, pero **solo propone**: nada se guarda hasta que lo aprueb
 
 ## Modelos y APIs
 
-En la pestaña **Modelo** eliges con qué modelo trabaja Agentik (el cambio aplica al siguiente mensaje) y puedes agregar más:
+En la pestaña **Modelo** eliges con qué modelo trabaja Kogn (el cambio aplica al siguiente mensaje) y puedes agregar más:
 
 | Tipo | Para qué | Notas |
 |---|---|---|
@@ -211,11 +211,11 @@ En la pestaña **Modelo** eliges con qué modelo trabaja Agentik (el cambio apli
 ## Seguridad y advertencias
 
 - **Es un agente con poder real:** a petición tuya puede mover y escribir archivos y ejecutar comandos de shell. Hay una red de seguridad (bloquea `sudo`, `rm` masivo, `mkfs`, `dd` a disco y `curl | sh`, y limita las operaciones de archivos a tus carpetas autorizadas), pero **no es un sandbox**. Úsalo bajo tu responsabilidad.
-- **Carpetas autorizadas con tope:** Agentik no acepta como carpeta autorizada algo demasiado amplio: el disco entero (también como "Macintosh HD"), un disco externo completo, tu carpeta personal entera, `Library` ni carpetas del sistema. Lo rechaza al agregarlo, lo quita solo al arrancar si ya estaba guardado, y las herramientas nunca lo tratan como permiso. Elige carpetas concretas (Descargas, Documentos, un proyecto).
+- **Carpetas autorizadas con tope:** Kogn no acepta como carpeta autorizada algo demasiado amplio: el disco entero (también como "Macintosh HD"), un disco externo completo, tu carpeta personal entera, `Library` ni carpetas del sistema. Lo rechaza al agregarlo, lo quita solo al arrancar si ya estaba guardado, y las herramientas nunca lo tratan como permiso. Elige carpetas concretas (Descargas, Documentos, un proyecto).
 - **Lo que se envía fuera:** tus mensajes y el contexto (actividad reciente, listados de carpetas y el contenido de los archivos que el modelo lea) van al proveedor del modelo que elijas (Anthropic, una API compatible con OpenAI, o Ollama en la nube). Con un modelo **local** de Ollama no sale nada de tu Mac.
 - **API keys:** se guardan cifradas con el Llavero de macOS, nunca en el repo, la base de datos ni los logs.
 - **Sin telemetría.** Todo (observador, memoria, hábitos) queda en tu equipo.
-- **App sin notarizar:** la firma es local (ad-hoc), no de un desarrollador registrado en Apple. Si macOS la bloquea o dice que está "dañada", ejecuta `xattr -cr /Applications/Agentik.app`.
+- **App sin notarizar:** la firma es local (ad-hoc), no de un desarrollador registrado en Apple. Si macOS la bloquea o dice que está "dañada", ejecuta `xattr -cr /Applications/Kogn.app`.
 
 ## Licencia y créditos
 

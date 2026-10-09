@@ -190,8 +190,8 @@ describe('el agente se detiene', () => {
   it('loadHistory: al reabrir, el modelo retoma la conversación guardada', async () => {
     const seen: ChatRequest[] = [];
     const ai = client({ chat: async (req) => { seen.push(JSON.parse(JSON.stringify(req))); return step('claro'); } });
-    ai.loadHistory([{ role: 'user', content: 'mi proyecto es Agentik' }, { role: 'assistant', content: 'anotado' }]);
+    ai.loadHistory([{ role: 'user', content: 'mi proyecto es Kogn' }, { role: 'assistant', content: 'anotado' }]);
     await ai.chat('¿cuál es mi proyecto?');
-    expect(seen[0]!.messages.map((m) => m.content)).toEqual(['mi proyecto es Agentik', 'anotado', '¿cuál es mi proyecto?']);
+    expect(seen[0]!.messages.map((m) => m.content)).toEqual(['mi proyecto es Kogn', 'anotado', '¿cuál es mi proyecto?']);
   });
 });

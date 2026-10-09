@@ -1,7 +1,7 @@
 {
   "name": "agentik",
   "version": "0.2.10",
-  "description": "Agentik: agente personal de escritorio para macOS",
+  "description": "Kogn: agente personal de escritorio para macOS",
   "license": "MIT",
   "author": "Daniel Pineda",
   "private": true,
@@ -17,7 +17,7 @@
   },
   "build": {
     "appId": "com.agetik.app",
-    "productName": "Agentik",
+    "productName": "Kogn",
     "directories": {
       "output": "release"
     },

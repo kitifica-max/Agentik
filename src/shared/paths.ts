@@ -20,7 +20,7 @@ const TREE = ['/System', '/bin', '/sbin', '/usr', '/private/etc', '/dev', '/core
 /**
  * Si dar acceso a esta carpeta sería peligroso o inviable (disco entero, sistema, tu carpeta personal completa...)
  * devuelve el motivo; si es una carpeta razonable, null. Autorizar una carpeta le da al agente permiso para
- * leer, mover y escribir ahí, y hace que Agentik vigile todo lo que cambie dentro.
+ * leer, mover y escribir ahí, y hace que Kogn vigile todo lo que cambie dentro.
  */
 export function broadFolderReason(folder: string, home: string = homedir()): string | null {
   if (!isAbsolute(folder)) return 'no es una ruta absoluta';
