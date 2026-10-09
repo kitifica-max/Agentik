@@ -345,11 +345,12 @@
     gemini: { url: 'https://generativelanguage.googleapis.com/v1beta/openai', model: 'gemini-3.8-flash' },
     'openai-main': { url: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
     deepseek: { url: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
-    groq: { url: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile' },
+    groq: { url: 'https://api.groq.com/openai/v1', model: 'openai/gpt-oss-120b' },
     openrouter: { url: 'https://openrouter.ai/api/v1', model: 'anthropic/claude-sonnet-4.5' },
     mistral: { url: 'https://api.mistral.ai/v1', model: 'mistral-large-latest' },
     kimi: { url: 'https://api.moonshot.ai/v1', model: 'kimi-k2.6' },
     xai: { url: 'https://api.x.ai/v1', model: 'grok-4' },
+    opencode: { url: 'https://opencode.ai/zen/v1', model: 'space-bunny-free' },
     together: { url: 'https://api.together.xyz/v1', model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo' },
   };
   function realProvider(v) { return PRESETS[v] ? 'openai' : v; }
