@@ -46,6 +46,8 @@ export interface ScriptCtx {
   fs: import('./fsops.js').SafeFs;
   /** Ejecuta un programa SIN shell (sin riesgo de inyección en los argumentos). */
   exec(cmd: string, args: string[], opts?: { timeoutMs?: number; cwd?: string }): Promise<ExecResult>;
+  /** Como exec, pero dentro de un sandbox de macOS: sin red y escribiendo solo en las carpetas indicadas (y /tmp). */
+  execSandboxed(cmd: string, args: string[], opts: { writeDirs: string[]; timeoutMs?: number }): Promise<ExecResult>;
   /** Ruta de una herramienta externa (módulo descargado o instalada en el sistema), o null. */
   bin(name: string): string | null;
   now: () => number;

@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
-import { existsSync, mkdirSync, renameSync } from 'node:fs';
+import { existsSync, mkdirSync, realpathSync, renameSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
-import { homedir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import type { Db } from '../db/db.js';
 import type { Config } from '../shared/types.js';
 import { logAudit, validatePath } from '../files/fileTools.js';
@@ -84,11 +84,25 @@ export function coerceParams(def: ScriptDef, raw: unknown, fs: SafeFs): { values
   return { values };
 }
 
+const SANDBOX = '/usr/bin/sandbox-exec';
+
+/** Perfil de sandbox: todo permitido salvo red y escritura fuera de las carpetas dadas. Rechaza rutas con caracteres que rompan el perfil. */
+export function sandboxProfile(writeDirs: string[]): string {
+  const dirs = [...writeDirs, tmpdir(), '/private/tmp', '/private/var/folders', '/dev'].map((d) => { try { return realpathSync(d); } catch { return resolve(d); } });
+  for (const d of dirs) if (/["\\\n\r]/.test(d)) throw new ScriptError(`Ruta no permitida en el sandbox: ${d}`);
+  return `(version 1)(allow default)(deny network*)(deny file-write*)(allow file-write* ${dirs.map((d) => `(subpath "${d}")`).join(' ')})`;
+}
+
+async function execSandboxed(cmd: string, args: string[], opts: { writeDirs: string[]; timeoutMs?: number }): Promise<ExecResult> {
+  if (!existsSync(SANDBOX)) return exec(cmd, args, { timeoutMs: opts.timeoutMs }); // sin sandbox-exec: se ejecuta igual (el módulo ya es de confianza)
+  return exec(SANDBOX, ['-p', sandboxProfile(opts.writeDirs), cmd, ...args], { timeoutMs: opts.timeoutMs });
+}
+
 function makeCtx(deps: Deps, runId: number): ScriptCtx {
   return {
     db: deps.db, config: deps.config,
     fs: new SafeFs(deps.db, deps.config, runId, deps.trashDir ?? defaultTrash()),
-    exec, bin: deps.bin ?? noBin, now: Date.now,
+    exec, execSandboxed, bin: deps.bin ?? noBin, now: Date.now,
   };
 }
 

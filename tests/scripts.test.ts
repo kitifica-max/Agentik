@@ -7,7 +7,10 @@ import { tmpdir } from 'node:os';
 import { deflateSync } from 'node:zlib';
 import { memoryDb, cfg } from './helpers.js';
 import { planScript, runScript, undoRun, listRuns, listScripts, type Deps } from '../src/scripts/engine.js';
-import { resolveBin } from '../src/scripts/modules.js';
+import { resolveBin, installModule, moduleStatus, MODULES } from '../src/scripts/modules.js';
+import { sandboxProfile } from '../src/scripts/engine.js';
+import { createHash } from 'node:crypto';
+import { chmodSync } from 'node:fs';
 import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { parseFactura } from '../src/scripts/library/oficina.js';
 
@@ -331,5 +334,118 @@ describe('oficina', () => {
   it.skipIf(!mac)('atajo de macOS: si no existe lo dice y lista los disponibles, sin ejecutar nada', async () => {
     const r = await runScript(deps, 'atajo-macos', { nombre: 'atajo-que-no-existe-xyz' });
     expect(r.ok && r.summary).toMatch(/No encuentro un Atajo/);
+  });
+});
+
+describe('sandbox', () => {
+  const run = (d: Deps, cmd: string, args: string[], writeDirs: string[]) => import('../src/scripts/engine.js').then(async () => {
+    const { execFile } = await import('node:child_process');
+    return new Promise<{ code: number; err: string }>((res) => execFile('/usr/bin/sandbox-exec', ['-p', sandboxProfile(writeDirs), cmd, ...args], (e, _o, se) => res({ code: e ? (typeof (e as { code?: unknown }).code === 'number' ? (e as unknown as { code: number }).code : 1) : 0, err: String(se) })));
+  });
+  it.skipIf(!mac)('solo deja escribir en las carpetas permitidas', async () => {
+    const { homedir } = await import('node:os');
+    const ok = join(homedir(), `agentik-sandbox-ok-${process.pid}`); const no = join(homedir(), `agentik-sandbox-no-${process.pid}.txt`); mkdirSync(ok);
+    try {
+      expect((await run(deps, '/bin/sh', ['-c', `echo hola > "${ok}/a.txt"`], [ok])).code).toBe(0);
+      expect(existsSync(join(ok, 'a.txt'))).toBe(true);
+      expect((await run(deps, '/bin/sh', ['-c', `echo hola > "${no}"`], [ok])).code).not.toBe(0);
+      expect(existsSync(no)).toBe(false);
+    } finally { rmSync(ok, { recursive: true, force: true }); rmSync(no, { force: true }); }
+  });
+  it.skipIf(!mac)('bloquea la red', async () => {
+    const srv = createServer((s) => s.end('HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nhi')); await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
+    const port = (srv.address() as { port: number }).port;
+    const libre = await new Promise<number>((res) => { import('node:child_process').then(({ execFile }) => execFile('/usr/bin/curl', ['-s', '-m', '3', `http://127.0.0.1:${port}`], (e) => res(e ? 1 : 0))); });
+    const enjaulado = await run(deps, '/usr/bin/curl', ['-s', '-m', '3', `http://127.0.0.1:${port}`], []);
+    srv.close();
+    expect(libre).toBe(0);
+    expect(enjaulado.code).not.toBe(0);
+  });
+  it('rechaza rutas que romperían el perfil', () => {
+    expect(() => sandboxProfile(['/tmp/a"b'])).toThrow(/no permitida/i);
+    expect(sandboxProfile([join(base, 'carpeta (con paréntesis)')])).toContain('(deny network*)');
+  });
+});
+
+describe('módulos', () => {
+  const body = Buffer.from('datos-del-modelo-de-prueba');
+  const fetchOf = (buf: Buffer, status = 200) => async () => ({ ok: status === 200, status, body: new Response(buf).body });
+  const spec = MODULES.find((m) => m.id === 'whisper-model-tiny')!;
+
+  it('los modelos de voz solo se instalan si la descarga coincide con la suma SHA-256', async () => {
+    const dir = join(base, 'mods');
+    const real = spec.how as { kind: 'model'; sha256: string; bytes: number };
+    const orig = { sha: real.sha256, bytes: real.bytes };
+    real.sha256 = createHash('sha256').update(body).digest('hex'); real.bytes = body.length; // modelo falso, pequeño
+    try {
+      expect(await installModule('whisper-model-tiny', { modulesDir: dir, fetchImpl: fetchOf(Buffer.from('otra cosa!!!!!!!!!!!!!!!!')) })).toMatchObject({ ok: false, error: expect.stringMatching(/suma de verificación/) });
+      expect(resolveBin('whisper-model-tiny', dir)).toBeNull();
+      expect(readdirSync(join(dir, 'whisper'))).toEqual([]); // no deja restos
+      expect(await installModule('whisper-model-tiny', { modulesDir: dir, fetchImpl: fetchOf(body) })).toEqual({ ok: true });
+      expect(readFileSync(resolveBin('whisper-model-tiny', dir)!)).toEqual(body);
+      expect(moduleStatus(dir).find((m) => m.id === 'whisper-model-tiny')!.installed).toBe(true);
+      expect(await installModule('whisper-model-tiny', { modulesDir: dir, fetchImpl: async () => { throw new Error('no debería descargar'); } })).toEqual({ ok: true }); // ya estaba
+    } finally { real.sha256 = orig.sha; real.bytes = orig.bytes; }
+  });
+
+  it('errores claros: descarga fallida, módulo inexistente y Homebrew ausente', async () => {
+    const dir = join(base, 'mods2');
+    expect(await installModule('whisper-model-base', { modulesDir: dir, fetchImpl: fetchOf(body, 404) })).toMatchObject({ ok: false, error: expect.stringMatching(/HTTP 404/) });
+    expect(await installModule('nada', { modulesDir: dir })).toMatchObject({ ok: false });
+    expect(await installModule('whisper-cli', { modulesDir: join(base, 'sin-bin'), brew: null })).toMatchObject({ ok: false, error: expect.stringMatching(/Homebrew/) });
+  });
+
+  it('los modelos pinneados tienen suma y tamaño conocidos', () => {
+    for (const m of MODULES.filter((x) => x.how.kind === 'model')) {
+      const h = m.how as { sha256: string; bytes: number; url: string };
+      expect(h.sha256).toMatch(/^[0-9a-f]{64}$/); expect(h.bytes).toBeGreaterThan(1e7); expect(h.url.startsWith('https://huggingface.co/')).toBe(true);
+    }
+  });
+});
+
+describe('contenido (ffmpeg y whisper)', () => {
+  const ffmpeg = resolveBin('ffmpeg');
+  const mkVideo = (name: string) => { const f = join(work, name); execFileSync(ffmpeg!, ['-v', 'error', '-f', 'lavfi', '-i', 'testsrc=duration=1:size=96x64:rate=10', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-shortest', '-pix_fmt', 'yuv420p', '-y', f]); return f; };
+
+  it.skipIf(!ffmpeg)('comprime videos a MP4 en «Comprimidos» sin tocar el original, y se deshace', async () => {
+    mkVideo('clip.mov');
+    const r = await runScript(deps, 'video-comprimir', { carpeta: work, calidad: 'baja' });
+    if (!r.ok) throw new Error(r.error);
+    expect(r.summary).toMatch(/1 video comprimido/);
+    expect(existsSync(join(work, 'Comprimidos', 'clip.mp4'))).toBe(true);
+    expect(existsSync(join(work, 'clip.mov'))).toBe(true);
+    expect(undoRun(deps, r.runId)).toMatchObject({ ok: true });
+    expect(existsSync(join(work, 'Comprimidos', 'clip.mp4'))).toBe(false);
+  });
+
+  it.skipIf(!ffmpeg)('extrae el audio y hace un GIF', async () => {
+    const v = mkVideo('clip.mp4');
+    const a = await runScript(deps, 'audio-extraer', { carpeta: work, formato: 'm4a' });
+    expect(a.ok && a.summary).toMatch(/1 audio extraído/);
+    expect(existsSync(join(work, 'Audio', 'clip.m4a'))).toBe(true);
+    const g = await runScript(deps, 'video-gif', { archivo: v, ancho: 120, segundos: 1 });
+    if (!g.ok) throw new Error(g.error);
+    expect(readFileSync(join(work, 'GIFs', 'clip.gif')).subarray(0, 3).toString()).toBe('GIF');
+  });
+
+  it.skipIf(!ffmpeg)('transcribe con Whisper (simulado): convierte a WAV, corre dentro del sandbox y guarda el texto', async () => {
+    const v = mkVideo('charla.mp4');
+    const fake = join(base, 'whisper-cli'); const model = join(base, 'ggml-base.bin');
+    writeFileSync(model, 'm');
+    writeFileSync(fake, '#!/bin/sh\nwhile [ $# -gt 0 ]; do case "$1" in -of) OF="$2"; shift;; -l) LANG_="$2"; shift;; -f) IN="$2"; shift;; esac; shift; done\n[ -s "$IN" ] || exit 3\necho "hola desde whisper ($LANG_)" > "$OF.txt"\n');
+    chmodSync(fake, 0o755);
+    const d2: Deps = { ...deps, bin: (n) => (n === 'whisper-cli' ? fake : n === 'whisper-model-base' ? model : resolveBin(n)) };
+    expect(await planScript({ ...deps, bin: (n) => (n === 'whisper-cli' ? fake : resolveBin(n)) }, 'transcribir', { archivo: v })).toMatchObject({ ok: false, error: expect.stringMatching(/Falta el modelo/) });
+    const r = await runScript(d2, 'transcribir', { archivo: v, idioma: 'es' });
+    if (!r.ok) throw new Error(r.error);
+    expect(readFileSync(join(work, 'Transcripciones', 'charla.txt'), 'utf8')).toBe('hola desde whisper (es)\n');
+    expect(await planScript(d2, 'transcribir', { archivo: put('nota.txt') })).toMatchObject({ ok: false, error: 'Elige un archivo de audio o video' });
+  });
+
+  it('sin la herramienta instalada avisa qué falta, sin ejecutar nada', async () => {
+    mkVideo2();
+    const sin: Deps = { ...deps, bin: () => null };
+    expect(await runScript(sin, 'video-comprimir', { carpeta: work })).toEqual({ ok: false, error: 'Falta instalar: ffmpeg' });
+    function mkVideo2() { put('v.mp4', 'no es video'); }
   });
 });
