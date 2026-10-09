@@ -173,6 +173,23 @@ describe('bucle del agente con cualquier proveedor', () => {
     expect(prev).not.toContain(allowed); // solo nombre base, sin ruta completa
   });
 
+  it('move_file se fusionó en move_files: un solo elemento mueve/renombra, y el nombre viejo ya no existe', async () => {
+    const db = memoryDb();
+    writeFileSync(join(allowed, 'viejo.txt'), 'x');
+    const { provider, requests } = script([
+      step('', [{ id: 'm', name: 'move_files', input: { moves: [{ source: join(allowed, 'viejo.txt'), destination: join(allowed, 'nuevo.txt') }] } }]),
+      step('Listo'),
+    ]);
+    const r = await client(db, () => ({ provider, profile: local })).chat('renombra viejo');
+    expect(existsSync(join(allowed, 'nuevo.txt'))).toBe(true);
+    expect(existsSync(join(allowed, 'viejo.txt'))).toBe(false);
+    expect(r.opsExecuted).toBe(1);
+    const names = requests[0]!.tools.map((t) => t.name);
+    expect(names).toContain('move_files');
+    expect(names).not.toContain('move_file');
+    expect(names).toContain('list_folder'); // se conserva: da tamaño, fecha y profundidad que el listado inicial no tiene
+  });
+
   it('se detiene en el límite de rondas y lo avisa', async () => {
     const db = memoryDb();
     const loop = step('', [{ id: 'x', name: 'list_folder', input: { path: allowed } }]);

@@ -40,7 +40,7 @@ const SYSTEM_PROMPT = `Eres Agentik, agente de escritorio autónomo en el Mac de
 
 REGLAS:
 1. Directo: instrucción → ejecutas. Sin plática ni confirmar lo obvio. Español.
-2. Archivos en masa: organize_folder (tú planeas con reglas, la Mac ejecuta). Antes mira la carpeta con list_folder. Reutiliza carpetas que ya existen.
+2. Archivos en masa: organize_folder (tú planeas con reglas, la Mac ejecuta). Mover o renombrar: move_files (uno o varios). Antes mira la carpeta con list_folder. Reutiliza carpetas que ya existen.
 3. Si te falta capacidad, usa run_command (zsh del usuario): python3, brew, osascript, git, find, mdfind, du, unzip, ffmpeg, etc. Para tareas pesadas escribe un script y córrelo. Instala lo que falte con brew/pip.
 4. Si algo falla, lee el error y corrige. No devuelvas la tarea al usuario.
 5. Borrar: mueve a ~/.Trash con mv; no uses rm salvo temporales que tú creaste.
@@ -89,7 +89,7 @@ const TOOLS: ToolDef[] = [
   },
   {
     name: 'move_files',
-    description: 'Mover varios archivos o carpetas de una vez (hasta 100). Crea las carpetas destino automáticamente. No pisa destinos existentes.',
+    description: 'Mover o renombrar uno o varios archivos o carpetas (hasta 100 a la vez; un solo elemento está bien). Crea las carpetas destino automáticamente. No pisa destinos existentes.',
     input_schema: {
       type: 'object' as const,
       properties: {
@@ -115,18 +115,6 @@ const TOOLS: ToolDef[] = [
       type: 'object' as const,
       properties: { path: { type: 'string', description: 'Ruta absoluta de la carpeta' } },
       required: ['path'],
-    },
-  },
-  {
-    name: 'move_file',
-    description: 'Mover o renombrar archivo. Crea carpeta destino si no existe.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        source: { type: 'string', description: 'Ruta absoluta origen' },
-        destination: { type: 'string', description: 'Ruta absoluta destino' },
-      },
-      required: ['source', 'destination'],
     },
   },
   {
@@ -270,8 +258,6 @@ export class AiClient {
     switch (name) {
       case 'create_folder':
         return op(executeFileOp(this.db, this.config, this.backupDir, 'mkdir', input.path as string));
-      case 'move_file':
-        return op(executeFileOp(this.db, this.config, this.backupDir, 'move', input.source as string, { dest: input.destination as string }));
       case 'copy_file':
         return op(executeFileOp(this.db, this.config, this.backupDir, 'copy', input.source as string, { dest: input.destination as string }));
       case 'write_file':
