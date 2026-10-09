@@ -11,7 +11,7 @@ Versión actual: **0.2.9**. Solo macOS. Las novedades de cada versión están en
 - **Observa solo si lo activas** (ver [Activar el observador](#activar-el-observador)).
 - **Recuerda solo lo que apruebas** (pestaña Memoria).
 - **Muestra el gasto** estimado en el pie de la burbuja (los modelos locales cuestan $0).
-- **Estilo line-art:** contornos negros de 2px, sombras duras, barra de ventana retro e ilustraciones en los estados vacíos; claro y oscuro. Un clic en el avatar abre el chat y otro lo cierra. Burbujas del agente en el mismo gris del avatar.
+- **Estilo line-art:** contornos negros de 2px, sombras duras, barra de ventana retro e ilustraciones en los estados vacíos; claro y oscuro. Guía de inicio con una ilustración animada por paso. Un clic en el avatar abre el chat y otro lo cierra. Burbujas del agente en el mismo gris del avatar.
 - **Menos tokens por turno:** caché de prompt en Anthropic, resultados de herramientas viejos compactados y menor presupuesto de contexto para modelos locales (Ollama).
 
 ## Descargar

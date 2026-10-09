@@ -583,6 +583,14 @@
     return e;
   }
 
+  // Ilustraciones animadas de la guía (SVG en línea, sin recursos externos; las animaciones están en bubble.css)
+  var GUIDE_ART = [
+    '<svg viewBox="0 0 300 150" aria-hidden="true"><rect class="w" x="22" y="14" width="170" height="112" rx="10"/><path d="M22 36h170"/><circle class="f" cx="38" cy="25" r="3.5"/><circle class="f" cx="52" cy="25" r="3.5"/><circle class="f" cx="66" cy="25" r="3.5"/><circle class="ring" cx="107" cy="82" r="32"/><g class="bnc"><circle class="p" cx="107" cy="82" r="32"/><ellipse class="f blk" cx="96" cy="76" rx="3.5" ry="5.5"/><ellipse class="f blk" cx="118" cy="76" rx="3.5" ry="5.5"/><path class="smile" d="M92 92q15 14 30 0"/></g><path class="f cur" d="M200 78l46 20-20 6-6 22z"/><path class="tw" d="M238 34v14M231 41h14"/><path class="tw d1" d="M262 70v8M258 74h8"/><path class="tw d2" d="M30 138v8M26 142h8"/></svg>',
+    '<svg viewBox="0 0 300 150" aria-hidden="true"><g class="clip"><rect class="w" x="70" y="10" width="160" height="132" rx="10"/><rect class="f" x="118" y="4" width="64" height="14" rx="5"/><rect x="88" y="34" width="16" height="16" rx="4"/><path class="ck" pathLength="1" d="M92 42l4 4 7-9"/><path class="ln" pathLength="1" d="M116 42h92"/><rect x="88" y="62" width="16" height="16" rx="4"/><path class="ck c2" pathLength="1" d="M92 70l4 4 7-9"/><path class="ln l2" pathLength="1" d="M116 70h70"/><rect class="wait" x="88" y="90" width="16" height="16" rx="4"/><path class="ln l3" pathLength="1" d="M116 98h80"/><rect x="88" y="118" width="16" height="16" rx="4"/><path class="ln l4" pathLength="1" d="M116 126h56"/></g><path class="tw" d="M252 30v12M246 36h12"/><path class="tw d1" d="M44 100v8M40 104h8"/></svg>',
+    '<svg viewBox="0 0 300 150" aria-hidden="true"><g class="m1"><rect class="f" x="140" y="18" width="130" height="38" rx="12"/><path class="f" d="M256 56l14 12v-12z"/><path class="inv" d="M158 30h74M158 42h46"/></g><g class="m2"><rect class="w" x="30" y="66" width="150" height="38" rx="12"/><path class="w" d="M44 104l-12 14v-14z"/><path d="M46 80h96M46 92h60"/></g><g class="m3"><rect class="w" x="30" y="114" width="64" height="28" rx="12"/><circle class="f td" cx="48" cy="128" r="3.5"/><circle class="f td t2" cx="62" cy="128" r="3.5"/><circle class="f td t3" cx="76" cy="128" r="3.5"/></g><g class="fold"><path class="w" d="M214 98h18l5 6h27v32h-50z"/><path d="M214 110h50"/></g><path class="tw" d="M276 14v10M271 19h10"/><path class="tw d1" d="M24 30v8M20 34h8"/></svg>',
+    '<svg viewBox="0 0 300 150" aria-hidden="true"><circle class="pls" cx="86" cy="76" r="46"/><g class="stp"><circle class="w" cx="86" cy="76" r="46"/><rect class="f" x="68" y="58" width="36" height="36" rx="6"/></g><rect class="w" x="168" y="30" width="96" height="40" rx="8"/><path d="M168 46h96"/><circle class="f" cx="180" cy="38" r="2.5"/><circle class="f" cx="190" cy="38" r="2.5"/><g class="kp"><rect class="w" x="168" y="84" width="40" height="34" rx="8"/><path d="M178 106l8-8 8 8"/></g><g class="kp k2"><rect class="w" x="216" y="84" width="48" height="34" rx="8"/><path d="M228 102h26"/></g><path class="tw" d="M148 22v10M143 27h10"/><path class="tw d1" d="M32 130v8M28 134h8"/></svg>'
+  ];
+
   function guideGo(target) {
     if (target === 'observer') {
       if (!current.enabled) api.invoke(ch.observerSetEnabled, true).then(function (s) { renderStatus(s); renderGuide(); });
@@ -606,6 +614,10 @@
     var step = G.STEPS[guideIdx];
     var body = document.getElementById('guide-body');
     body.innerHTML = '';
+    var hero = el('div', 'guide-hero');
+    hero.innerHTML = GUIDE_ART[guideIdx] || ''; // contenido fijo del propio código, no del usuario
+    body.appendChild(hero);
+    body.appendChild(el('div', 'guide-kick', 'Paso ' + (guideIdx + 1) + ' de ' + G.STEPS.length));
     body.appendChild(el('h3', 'guide-title', step.title));
     if (!step.checklist && !step.examples) {
       step.body.forEach(function (t) { body.appendChild(el('p', 'guide-text', t)); });
