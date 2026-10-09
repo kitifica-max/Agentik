@@ -117,13 +117,13 @@ export class SafeFs {
   }
 
   /** Escribe un archivo nuevo (sin pisar) dentro de una carpeta autorizada, aunque su nombre sea "sensible" (p. ej. .env.example). */
-  writeNew(p: string, content: string): string {
+  writeNew(p: string, content: string | Buffer): string {
     this.writable();
     const abs = resolve(p);
     if (!this.config.allowed_folders.some((f) => isAbsolute(f) && !broadFolderReason(f) && isWithin(f, abs))) throw new ScriptError('Fuera de carpetas autorizadas');
     if (existsSync(abs)) throw new ScriptError(`Ya existe: ${abs}`);
     mkdirSync(dirname(abs), { recursive: true });
-    writeFileSync(abs, content, 'utf8');
+    writeFileSync(abs, content);
     this.record('create', null, abs);
     return abs;
   }

@@ -8,6 +8,8 @@ import { deflateSync } from 'node:zlib';
 import { memoryDb, cfg } from './helpers.js';
 import { planScript, runScript, undoRun, listRuns, listScripts, type Deps } from '../src/scripts/engine.js';
 import { resolveBin } from '../src/scripts/modules.js';
+import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { parseFactura } from '../src/scripts/library/oficina.js';
 
 let base: string, work: string, trash: string;
 let deps: Deps;
@@ -247,5 +249,87 @@ describe('desarrollo', () => {
     writeFileSync(join(repo, 'b.txt'), '2');
     r = await runScript(deps, 'repos-estado', { carpeta: work });
     expect(r.ok && r.lines[0]).toMatch(/1 cambio/);
+  });
+});
+
+async function pdf(pages: string[]): Promise<Buffer> {
+  const d = await PDFDocument.create(); const f = await d.embedFont(StandardFonts.Helvetica);
+  for (const text of pages) { const pg = d.addPage([400, 300]); text.split('\n').forEach((l, i) => pg.drawText(l, { x: 20, y: 270 - i * 18, size: 12, font: f })); }
+  return Buffer.from(await d.save());
+}
+const mac = process.platform === 'darwin';
+
+describe('oficina', () => {
+  it('une PDFs en orden natural (2 antes que 10) y deshacer manda el resultado a la Papelera', async () => {
+    put('10-fin.pdf', await pdf(['diez'])); put('2-medio.pdf', await pdf(['dos', 'dos b'])); put('1-inicio.pdf', await pdf(['uno']));
+    const pl = await planScript(deps, 'pdf-unir', { carpeta: work, nombre: 'Todo' });
+    expect(pl.ok && pl.plan.lines.map((l) => l.replace(/\s+\(.*/, ''))).toEqual(['1. 1-inicio.pdf', '2. 2-medio.pdf', '3. 10-fin.pdf']);
+    const r = await runScript(deps, 'pdf-unir', { carpeta: work, nombre: 'Todo' });
+    if (!r.ok) throw new Error(r.error);
+    const out = await PDFDocument.load(readFileSync(join(work, 'Unidos', 'Todo.pdf')));
+    expect(out.getPageCount()).toBe(4);
+    expect(existsSync(join(work, '1-inicio.pdf'))).toBe(true);
+    expect(undoRun(deps, r.runId)).toMatchObject({ ok: true });
+    expect(existsSync(join(work, 'Unidos', 'Todo.pdf'))).toBe(false);
+  });
+
+  it('con menos de 2 PDFs no hace nada, y un PDF dañado no rompe a los demás', async () => {
+    put('solo.pdf', await pdf(['x']));
+    expect(await runScript(deps, 'pdf-unir', { carpeta: work })).toMatchObject({ ok: true, summary: expect.stringMatching(/al menos 2/) });
+    put('malo.pdf', 'esto no es un pdf'); put('otro.pdf', await pdf(['y']));
+    const r = await runScript(deps, 'pdf-unir', { carpeta: work });
+    expect(r.ok && r.summary).toMatch(/No pude leer: malo\.pdf/);
+  });
+
+  it('divide un PDF de a N páginas en una carpeta nueva junto al original', async () => {
+    const f = put('libro.pdf', await pdf(['1', '2', '3', '4', '5']));
+    const r = await runScript(deps, 'pdf-dividir', { archivo: f, cada: 2 });
+    if (!r.ok) throw new Error(r.error);
+    expect(names(join(work, 'libro (dividido)'))).toEqual(['libro_p001-p002.pdf', 'libro_p003-p004.pdf', 'libro_p005.pdf']);
+    expect((await PDFDocument.load(readFileSync(join(work, 'libro (dividido)', 'libro_p005.pdf')))).getPageCount()).toBe(1);
+    expect(await planScript(deps, 'pdf-dividir', { archivo: put('nota.txt') })).toMatchObject({ ok: false, error: 'Elige un archivo PDF' });
+  });
+
+  it('parseFactura: fecha ISO, latina y en palabras; total con formatos mixtos; proveedor', () => {
+    expect(parseFactura('Papelería El Sol\nFactura No. 123\nFecha: 05/03/2026\nTotal $ 1,234.50')).toEqual({ fecha: '2026-03-05', proveedor: 'Papelería El Sol', total: '1234.50' });
+    expect(parseFactura('ACME S.A.\n2026-10-09\nTOTAL: 1.234,50').total).toBe('1234.50');
+    expect(parseFactura('Servicios Web\n12 de septiembre de 2026\nTotal 99').fecha).toBe('2026-09-12');
+    expect(parseFactura('sin fecha ni nada').fecha).toBeNull();
+    expect(parseFactura('Tienda\n31/13/2026').fecha).toBeNull(); // mes imposible
+  });
+
+  it.skipIf(!mac)('facturas: lee el texto del PDF con PDFKit, ordena por año/mes y manda las dudosas a Revisar', async () => {
+    put('f1.pdf', await pdf(['Papeleria El Sol', 'Factura No. 1', 'Fecha: 05/03/2026', 'Total: 250.75']));
+    put('f2.pdf', await pdf(['Un documento cualquiera sin fecha']));
+    const r = await runScript(deps, 'facturas', { carpeta: work });
+    if (!r.ok) throw new Error(r.error);
+    expect(existsSync(join(work, 'Facturas', '2026', '03', '2026-03-05_Papeleria El Sol_250.75.pdf'))).toBe(true);
+    expect(existsSync(join(work, 'Facturas', 'Revisar', 'f2.pdf'))).toBe(true);
+    expect(undoRun(deps, r.runId)).toMatchObject({ ok: true, restored: 2 });
+    expect(existsSync(join(work, 'f1.pdf')) && existsSync(join(work, 'f2.pdf'))).toBe(true);
+  });
+
+  it('limpia un CSV: duplicados, columnas vacías, espacios y totales; no toca el original', async () => {
+    const f = put('datos.csv', 'nombre,monto,vacia\n Ana ,10,\nLuis,20.5,\nAna,10,\n,,\nLuis,20.5,\n');
+    const r = await runScript(deps, 'csv-limpiar', { archivo: f });
+    if (!r.ok) throw new Error(r.error);
+    expect(readFileSync(join(work, 'datos_limpio.csv'), 'utf8')).toBe('nombre,monto\nAna,10\nLuis,20.5\n');
+    expect(r.lines).toContain('Total monto: 30.5');
+    expect(readFileSync(f, 'utf8')).toContain(' Ana ');
+    const again = await planScript(deps, 'csv-limpiar', { archivo: join(work, 'datos_limpio.csv') });
+    expect(again.ok && again.plan.summary).toBe('El CSV ya está limpio.');
+  });
+
+  it.skipIf(!mac)('documentos a texto: RTF con textutil y PDF con PDFKit', async () => {
+    put('nota.rtf', '{\\rtf1\\ansi Hola mundo desde RTF}'); put('pdf.pdf', await pdf(['Texto dentro del PDF']));
+    const r = await runScript(deps, 'docs-a-texto', { carpeta: work });
+    if (!r.ok) throw new Error(r.error);
+    expect(readFileSync(join(work, 'Texto', 'nota.txt'), 'utf8')).toContain('Hola mundo desde RTF');
+    expect(readFileSync(join(work, 'Texto', 'pdf.txt'), 'utf8')).toContain('Texto dentro del PDF');
+  });
+
+  it.skipIf(!mac)('atajo de macOS: si no existe lo dice y lista los disponibles, sin ejecutar nada', async () => {
+    const r = await runScript(deps, 'atajo-macos', { nombre: 'atajo-que-no-existe-xyz' });
+    expect(r.ok && r.summary).toMatch(/No encuentro un Atajo/);
   });
 });
