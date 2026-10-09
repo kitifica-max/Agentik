@@ -346,6 +346,7 @@
     groq: { url: 'https://api.groq.com/openai/v1', model: 'llama-3.3-70b-versatile' },
     openrouter: { url: 'https://openrouter.ai/api/v1', model: 'anthropic/claude-sonnet-4.5' },
     mistral: { url: 'https://api.mistral.ai/v1', model: 'mistral-large-latest' },
+    kimi: { url: 'https://api.moonshot.ai/v1', model: 'kimi-k2.6' },
     xai: { url: 'https://api.x.ai/v1', model: 'grok-4' },
     together: { url: 'https://api.together.xyz/v1', model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo' },
   };
