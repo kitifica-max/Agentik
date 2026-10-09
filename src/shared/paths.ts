@@ -45,3 +45,9 @@ export function sanitizeFolders(folders: string[], home: string = homedir()): { 
   }
   return { kept, removed };
 }
+
+// Zonas internas de la app (p. ej. la de archivos adjuntos al chat): cuentan como autorizadas aunque no estén en la lista
+// del usuario y aunque estén dentro de Library (que para carpetas elegidas por el usuario sí se rechaza).
+let internalRoots: string[] = [];
+export function setInternalRoots(roots: string[]): void { internalRoots = roots.map((r) => resolve(r)); }
+export function isInsideInternalRoot(abs: string): boolean { return internalRoots.some((r) => isWithin(r, abs)); }

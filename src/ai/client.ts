@@ -1,6 +1,6 @@
 import { readdirSync, statSync, openSync, readSync, closeSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
-import { isWithin, broadFolderReason } from '../shared/paths.js';
+import { isWithin, broadFolderReason, isInsideInternalRoot } from '../shared/paths.js';
 import type { Db } from '../db/db.js';
 import type { Config, ChatMessage, Memory, ModelProfile } from '../shared/types.js';
 import type { Provider, ToolDef, Msg, Block, LlmResult } from './providers.js';
@@ -15,6 +15,7 @@ import { compactToolResults } from './compact.js';
 import { actionLine, actionsBlock } from './actions.js';
 import { matchRecipe, runRecipe, canUndo } from './recipes.js';
 import { listScripts, runScript } from '../scripts/engine.js';
+import { describeAttachments, type Committed } from '../chat/attachments.js';
 import { homedir } from 'node:os';
 
 const MAX_TOKENS = 8192;
@@ -241,7 +242,7 @@ function allowedFoldersListing(config: Config, maxEntries: number): string {
 
 function isInsideAllowed(config: Config, filePath: string): boolean {
   const abs = resolve(filePath);
-  return config.allowed_folders.some((f) => isAbsolute(f) && !broadFolderReason(f) && isWithin(f, abs));
+  return isInsideInternalRoot(abs) || config.allowed_folders.some((f) => isAbsolute(f) && !broadFolderReason(f) && isWithin(f, abs));
 }
 
 export interface ChatResult {
@@ -353,9 +354,11 @@ export class AiClient {
     }
   }
 
-  async chat(userMessage: string, signal?: AbortSignal): Promise<ChatResult> {
+  async chat(shownMessage: string, signal?: AbortSignal, attachments?: Committed): Promise<ChatResult> {
+    const att = attachments && attachments.files.length ? attachments : undefined;
+    const userMessage = att ? `${shownMessage}\n\n${describeAttachments(att)}` : shownMessage; // el modelo ve dónde están los adjuntos
     // Receta local ("organiza Downloads"): se resuelve sin modelo, sin gastar tokens.
-    const recipe = matchRecipe(userMessage, this.config);
+    const recipe = matchRecipe(shownMessage, this.config, att);
     if (recipe && !(recipe.id === 'undo' && !canUndo(this.db))) {
       const r = await runRecipe(recipe, { db: this.db, config: this.config, backupDir: this.backupDir, bin: this.scriptBin });
       this.sessionHistory.push({ role: 'user', content: userMessage }, { role: 'assistant', content: r.reply + actionsBlock(r.action ? [r.action] : []) });

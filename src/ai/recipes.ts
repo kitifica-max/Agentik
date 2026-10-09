@@ -6,6 +6,7 @@ import type { Config } from '../shared/types.js';
 import { isWithin, broadFolderReason } from '../shared/paths.js';
 import { isSensitivePath } from '../observer/filters.js';
 import { logAudit } from '../files/fileTools.js';
+import type { Committed } from '../chat/attachments.js';
 import { listScripts, runScript, listRuns, undoRun, findScript, type Deps as ScriptDeps } from '../scripts/engine.js';
 
 // Recetas locales: peticiones frecuentes y sin ambigüedad que se resuelven en la Mac, sin llamar al modelo.
@@ -19,6 +20,8 @@ export interface RecipeDeps { db: Db; config: Config; backupDir?: string; bin?: 
 
 const ALIAS: Record<string, string> = { descargas: 'downloads', escritorio: 'desktop', documentos: 'documents' };
 const norm = (s: string): string => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+const DET = new Set(['el', 'la', 'los', 'las', 'estos', 'estas', 'este', 'esta', 'mi', 'mis', 'un', 'una', 'unos', 'unas']);
+const squash = (s: string): string => norm(s).split(/\s+/).filter((w) => w && !DET.has(w)).join(' ');
 
 const ORGANIZE = /^\s*(?:organiza|ordena)(?:me)?\s+(?:(?:por favor|pf)\s+)?(?:(?:mi|mis|la|el|las|los)\s+)?(?:carpeta\s+)?(?:de\s+)?(.+?)(?:\s+(?:por favor|pf))?\s*[.!]*\s*$/i;
 const UNDO = /^\s*(?:deshaz|deshacer|des-?hacer)(?:\s+(?:eso|lo\s+(?:ultimo|anterior)|la\s+ultima(?:\s+tarea)?))?\s*[.!]*\s*$/i;
@@ -70,31 +73,38 @@ const SCRIPT_WORDS: Record<string, string[]> = {
   'audio-extraer': ['extrae audio', 'extraer audio'],
   'imagenes-convertir': ['convierte imagenes', 'convertir imagenes'],
   'imagenes-redimensionar': ['redimensiona imagenes', 'redimensionar imagenes'],
+  'pdf-dividir': ['divide', 'divide pdf', 'dividir pdf', 'parte pdf'],
+  'csv-limpiar': ['limpia csv', 'limpiar csv'],
+  'transcribir': ['transcribe', 'transcribir', 'transcribe audio', 'transcribe video'],
+  'video-gif': ['gif', 'haz gif', 'video a gif'],
 };
 
-function scriptMatch(text: string, config: Config): RecipeMatch | null {
+function scriptMatch(text: string, config: Config, att?: Committed): RecipeMatch | null {
   const t = norm(text).replace(/[.!¡?¿]+/g, ' ').replace(/\s+/g, ' ').trim();
   const m = /^(?:(?:corre|ejecuta|usa|haz|revisa|busca)\s+)?(?:el script\s+)?(.+?)(?:\s+(?:en|de|sobre|dentro de)\s+(?:la carpeta\s+|mi carpeta\s+|mis\s+|mi\s+|la\s+|el\s+)?(.+))?$/.exec(t);
   if (!m) return null;
-  const phrase = m[1]!.replace(/^(?:los|las|el|la)\s+/, '');
-  const info = listScripts().find((s) => {
-    const words = [s.id.replace(/-/g, ' '), norm(s.title), ...(SCRIPT_WORDS[s.id] ?? [])];
-    return words.includes(phrase);
-  });
+  const phrase = squash(m[1]!);
+  const info = listScripts().find((s) => [s.id.replace(/-/g, ' '), s.title, ...(SCRIPT_WORDS[s.id] ?? [])].map(squash).includes(phrase));
   if (!info) return null;
-  const onlyFolder = info.params.every((p) => p.name === 'carpeta' || !p.required || p.default !== undefined);
-  if (!onlyFolder) return null;
-  const needsFolder = info.params.some((p) => p.name === 'carpeta');
-  if (!needsFolder) return m[2] ? null : { id: 'script', script: info.id, params: {} };
-  if (!m[2]) return null; // sin carpeta clara: que pregunte el modelo
-  const folder = resolveFolder(m[2], config);
-  return folder ? { id: 'script', script: info.id, params: { carpeta: folder } } : null;
+  const onlyKnown = info.params.every((p) => ['carpeta', 'archivo'].includes(p.name) || !p.required || p.default !== undefined);
+  if (!onlyKnown) return null;
+  const params: Record<string, string> = {};
+  if (info.params.some((p) => p.name === 'carpeta')) {
+    const folder = m[2] ? resolveFolder(m[2], config) : att ? att.dir : null; // sin carpeta explícita, usa la de los adjuntos
+    if (!folder) return null;
+    params.carpeta = folder;
+  } else if (m[2] && !info.params.some((p) => p.name === 'archivo')) return null;
+  if (info.params.some((p) => p.name === 'archivo')) {
+    if (!att?.files.length) return null; // sin adjunto no hay de qué archivo hablar: que pregunte el modelo
+    params.archivo = att.files[0]!.path;
+  }
+  return { id: 'script', script: info.id, params };
 }
 
-export function matchRecipe(text: string, config: Config): RecipeMatch | null {
+export function matchRecipe(text: string, config: Config, att?: Committed): RecipeMatch | null {
   if (typeof text !== 'string' || text.length > 200) return null;
   if (UNDO.test(text)) return { id: 'undo' };
-  const scr = scriptMatch(text, config);
+  const scr = scriptMatch(text, config, att);
   if (scr) return scr;
   const m = ORGANIZE.exec(text);
   if (!m) return null;

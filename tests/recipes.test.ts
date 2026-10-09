@@ -6,6 +6,10 @@ import { memoryDb, cfg } from './helpers.js';
 import { matchRecipe, runRecipe } from '../src/ai/recipes.js';
 import { AiClient } from '../src/ai/client.js';
 import type { Provider } from '../src/ai/providers.js';
+import { Attachments } from '../src/chat/attachments.js';
+import { setInternalRoots } from '../src/shared/paths.js';
+import { PDFDocument } from 'pdf-lib';
+import { readFileSync } from 'node:fs';
 
 let base: string, downloads: string, outside: string;
 const config = () => ({ ...cfg, allowed_folders: [downloads] });
@@ -130,5 +134,66 @@ describe('recetas de scripts y deshacer', () => {
     expect(listed).toContain('duplicados — Duplicados [mueve]');
     expect(existsSync(join(downloads, 'Duplicados'))).toBe(true);
     expect(r.opsExecuted).toBeGreaterThan(0);
+  });
+});
+
+describe('adjuntos en el chat', () => {
+  let src: string, att: Attachments;
+  const adjuntar = (names: Record<string, string | Buffer>) => {
+    for (const [n, c] of Object.entries(names)) writeFileSync(join(src, n), c);
+    att.stage(1, Object.keys(names).map((n) => join(src, n)));
+    return att.commit(1)!;
+  };
+  beforeEach(() => { src = join(base, 'fuera'); mkdirSync(src); att = new Attachments(join(base, 'adjuntos')); setInternalRoots([join(base, 'adjuntos')]); });
+  afterEach(() => setInternalRoots([]));
+
+  const noModel = () => { const calls = { n: 0 }; const provider: Provider = { async chat() { calls.n++; return { text: 'del modelo', toolCalls: [], usage: {}, stop: 'end', assistantMsg: { role: 'assistant', content: 'x' } }; } }; return { calls, provider }; };
+  const pdf = async (txt: string) => { const d = await PDFDocument.create(); d.addPage([200, 100]).drawText(txt, { x: 10, y: 50, size: 10 }); return Buffer.from(await d.save()); };
+
+  it('«une estos pdfs» con adjuntos los une dentro de la carpeta del mensaje, sin modelo y sin tocar los originales', async () => {
+    const c = adjuntar({ 'a.pdf': await pdf('uno'), 'b.pdf': await pdf('dos') });
+    const { calls, provider } = noModel();
+    const ai = new AiClient(memoryDb(), config(), join(base, 'backups'), () => ({ provider, profile: { id: 'l', label: 'L', provider: 'ollama', model: 'm' } }));
+    const r = await ai.chat('une estos pdfs', undefined, c);
+    expect(r.reply).toMatch(/2 PDFs unidos en 2 páginas/);
+    expect(calls.n).toBe(0);
+    expect((await PDFDocument.load(readFileSync(join(c.dir, 'Unidos', 'Unido.pdf')))).getPageCount()).toBe(2);
+    expect(existsSync(join(src, 'a.pdf'))).toBe(true);
+  });
+
+  it('un script de un archivo usa el adjunto: «limpia el csv»', async () => {
+    const c = adjuntar({ 'datos.csv': 'a,b\n1,2\n1,2\n' });
+    const ai = new AiClient(memoryDb(), config(), join(base, 'backups'), () => { throw new Error('no debería llamar al modelo'); });
+    const r = await ai.chat('limpia el csv', undefined, c);
+    expect(r.reply).toMatch(/datos_limpio\.csv/);
+    expect(readFileSync(join(c.dir, 'datos_limpio.csv'), 'utf8')).toBe('a,b\n1,2\n');
+  });
+
+  it('sin adjunto, un script de archivo no se adivina; con otras peticiones el modelo ve dónde están los adjuntos', async () => {
+    const ai0 = new AiClient(memoryDb(), config(), join(base, 'backups'), () => ({ provider: noModel().provider, profile: { id: 'l', label: 'L', provider: 'ollama', model: 'm' } }));
+    expect(matchRecipe('limpia el csv', config())).toBeNull();
+    const c = adjuntar({ 'nota.txt': 'hola desde el adjunto' });
+    const reqs: any[] = [];
+    const provider: Provider = { async chat(req) { reqs.push(JSON.parse(JSON.stringify(req))); return { text: 'ok', toolCalls: [], usage: {}, stop: 'end', assistantMsg: { role: 'assistant', content: 'x' } }; } };
+    const ai = new AiClient(memoryDb(), config(), join(base, 'backups'), () => ({ provider, profile: { id: 'l', label: 'L', provider: 'ollama', model: 'm' } }));
+    await ai.chat('¿qué dice este archivo?', undefined, c);
+    const last = reqs[0].messages.at(-1).content as string;
+    expect(last).toContain('¿qué dice este archivo?');
+    expect(last).toContain('[Archivos adjuntos por el usuario');
+    expect(last).toContain(join(c.dir, 'nota.txt'));
+    void ai0;
+  });
+
+  it('el modelo puede LEER los adjuntos (zona interna) pero no otros archivos fuera de lo autorizado', async () => {
+    const c = adjuntar({ 'nota.txt': 'hola desde el adjunto' });
+    writeFileSync(join(src, 'privado.txt'), 'no autorizado');
+    const reqs: any[] = []; let n = 0;
+    const steps = [[{ id: 'a', name: 'read_file', input: { path: join(c.dir, 'nota.txt') } }, { id: 'b', name: 'read_file', input: { path: join(src, 'privado.txt') } }], []];
+    const provider: Provider = { async chat(req) { reqs.push(JSON.parse(JSON.stringify(req))); const calls = steps[n++] ?? []; return { text: calls.length ? '' : 'listo', toolCalls: calls as any, usage: {}, stop: 'end', assistantMsg: { role: 'assistant', content: calls.map((x: any) => ({ type: 'tool_use', ...x })) } }; } };
+    const ai = new AiClient(memoryDb(), config(), join(base, 'backups'), () => ({ provider, profile: { id: 'l', label: 'L', provider: 'ollama', model: 'm' } }));
+    await ai.chat('lee mis archivos', undefined, c);
+    const results = reqs[1].messages.at(-1).content;
+    expect(results[0].content).toBe('hola desde el adjunto');
+    expect(results[1]).toMatchObject({ is_error: true, content: 'Fuera de carpetas autorizadas' });
   });
 });

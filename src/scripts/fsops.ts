@@ -3,7 +3,7 @@ import { basename, dirname, extname, isAbsolute, join, resolve } from 'node:path
 import type { Db } from '../db/db.js';
 import type { Config } from '../shared/types.js';
 import { validatePath } from '../files/fileTools.js';
-import { isWithin, broadFolderReason } from '../shared/paths.js';
+import { isWithin, broadFolderReason, isInsideInternalRoot } from '../shared/paths.js';
 import { isSensitivePath } from '../observer/filters.js';
 
 export class ScriptError extends Error {}
@@ -120,7 +120,7 @@ export class SafeFs {
   writeNew(p: string, content: string | Buffer): string {
     this.writable();
     const abs = resolve(p);
-    if (!this.config.allowed_folders.some((f) => isAbsolute(f) && !broadFolderReason(f) && isWithin(f, abs))) throw new ScriptError('Fuera de carpetas autorizadas');
+    if (!isInsideInternalRoot(abs) && !this.config.allowed_folders.some((f) => isAbsolute(f) && !broadFolderReason(f) && isWithin(f, abs))) throw new ScriptError('Fuera de carpetas autorizadas');
     if (existsSync(abs)) throw new ScriptError(`Ya existe: ${abs}`);
     mkdirSync(dirname(abs), { recursive: true });
     writeFileSync(abs, content);

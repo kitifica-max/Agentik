@@ -3,7 +3,7 @@ import { resolve, basename, dirname, isAbsolute, join, extname } from 'node:path
 import type { Db } from '../db/db.js';
 import type { Config, FileEdit } from '../shared/types.js';
 import { isSensitivePath } from '../observer/filters.js';
-import { isWithin, broadFolderReason } from '../shared/paths.js';
+import { isWithin, broadFolderReason, isInsideInternalRoot } from '../shared/paths.js';
 
 export type FileOp = 'write' | 'move' | 'mkdir' | 'copy';
 
@@ -17,7 +17,7 @@ interface OpPayload {
 function isInsideAllowed(config: Config, filePath: string): boolean {
   const abs = resolve(filePath);
   // Una carpeta demasiado amplia (p. ej. "/") nunca cuenta como permiso, aunque esté en la configuración.
-  return config.allowed_folders.some((f) => isAbsolute(f) && !broadFolderReason(f) && isWithin(f, abs));
+  return isInsideInternalRoot(abs) || config.allowed_folders.some((f) => isAbsolute(f) && !broadFolderReason(f) && isWithin(f, abs));
 }
 
 function simpleDiff(oldLines: string[], newLines: string[]): string {
