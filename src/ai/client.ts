@@ -13,6 +13,7 @@ import { runCommand, isBlockedCommand } from '../shell/shell.js';
 import { recordUsage, profilePrice } from './cost.js';
 import { compactToolResults } from './compact.js';
 import { actionLine, actionsBlock } from './actions.js';
+import { matchRecipe, runRecipe } from './recipes.js';
 import { homedir } from 'node:os';
 
 const MAX_TOKENS = 8192;
@@ -334,6 +335,15 @@ export class AiClient {
   }
 
   async chat(userMessage: string, signal?: AbortSignal): Promise<ChatResult> {
+    // Receta local ("organiza Downloads"): se resuelve sin modelo, sin gastar tokens.
+    const recipe = matchRecipe(userMessage, this.config);
+    if (recipe) {
+      const r = runRecipe(recipe, this.db, this.config, this.backupDir);
+      this.sessionHistory.push({ role: 'user', content: userMessage }, { role: 'assistant', content: r.reply + actionsBlock(r.action ? [r.action] : []) });
+      if (this.sessionHistory.length > 40) this.sessionHistory = this.sessionHistory.slice(-30);
+      return { reply: r.reply, opsExecuted: r.ops };
+    }
+
     const { provider, profile } = this.resolveModel();
     const budget = budgetFor(profile);
     const contextParts: string[] = [];
