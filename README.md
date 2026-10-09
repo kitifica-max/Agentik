@@ -2,7 +2,7 @@
 
 Agente personal de escritorio para macOS. Un personaje flotante que hace tareas por ti en tu Mac (organizar archivos, ejecutar comandos), recuerda lo que apruebas y, si tú lo activas, observa en qué trabajas para ayudarte mejor.
 
-Versión actual: **0.2.5**. Solo macOS. Las novedades de cada versión están en [Releases](https://github.com/kitifica-max/Agentik/releases). El agente puede ejecutar comandos y modificar archivos: lee [Seguridad y advertencias](#seguridad-y-advertencias) antes de usarlo.
+Versión actual: **0.2.8**. Solo macOS. Las novedades de cada versión están en [Releases](https://github.com/kitifica-max/Agentik/releases). El agente puede ejecutar comandos y modificar archivos: lee [Seguridad y advertencias](#seguridad-y-advertencias) antes de usarlo.
 
 ## Qué hace
 
@@ -11,6 +11,7 @@ Versión actual: **0.2.5**. Solo macOS. Las novedades de cada versión están en
 - **Observa solo si lo activas** (ver [Activar el observador](#activar-el-observador)).
 - **Recuerda solo lo que apruebas** (pestaña Memoria).
 - **Muestra el gasto** estimado en el pie de la burbuja (los modelos locales cuestan $0).
+- **Estilo line-art:** contornos negros de 2px, sombras duras, barra de ventana retro e ilustraciones en los estados vacíos; claro y oscuro.
 
 ## Descargar
 
@@ -115,7 +116,7 @@ Mientras el observador esté activo, el personaje muestra un punto rojo pulsante
 
 ## Animaciones del personaje
 
-El círculo es solo el contenedor y no se mueve. El personaje se anima por capas (cabeza y torso, generadas con `node scripts/split-avatar.mjs`) con el motor `src/renderer/avatar-engine.js`: máquina de estados, respiración, parpadeo aleatorio cada 3 a 5 s, movimientos oculares (saccades), gestos y sincronía con audio. Siempre sonríe.
+El círculo es solo el contenedor y no se mueve; lleva un contorno de 2px como el resto de la interfaz. El personaje se anima por capas (cabeza y torso, generadas con `node scripts/split-avatar.mjs`) con el motor `src/renderer/avatar-engine.js`: máquina de estados, respiración, parpadeo aleatorio cada 3 a 5 s, movimientos oculares (saccades), gestos y sincronía con audio. Siempre sonríe.
 
 **Dos avatares**, a elegir en **Ajustes → Avatar** (cambia al instante, sin reiniciar):
 - **Niño** y **Niña** (con anteojos). Sus datos (ojos, boca, cuello, parches) están en `src/renderer/avatars.js`. El dibujo de la niña no tiene cejas, así que no se dibujan: su expresión va en ojos, boca y cabeza.
