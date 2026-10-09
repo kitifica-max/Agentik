@@ -79,6 +79,23 @@ CREATE TABLE IF NOT EXISTS conversations (
   pinned  INTEGER NOT NULL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS script_runs (
+  id      INTEGER PRIMARY KEY,
+  ts      INTEGER NOT NULL,
+  script  TEXT NOT NULL,
+  summary TEXT NOT NULL DEFAULT '',
+  undone  INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS script_undo (
+  id     INTEGER PRIMARY KEY,
+  run_id INTEGER NOT NULL,
+  kind   TEXT NOT NULL CHECK (kind IN ('move','create')),
+  src    TEXT,
+  dst    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_script_undo_run ON script_undo(run_id);
+
 CREATE TABLE IF NOT EXISTS app_state (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL

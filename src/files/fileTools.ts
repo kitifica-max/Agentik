@@ -40,7 +40,7 @@ export function logAudit(db: Db, action: string, detail?: string): void {
   db.prepare('INSERT INTO audit_log (ts, action, detail) VALUES (?, ?, ?)').run(Date.now(), action, detail ?? null);
 }
 
-function validatePath(config: Config, filePath: string): string | { error: string } {
+export function validatePath(config: Config, filePath: string): string | { error: string } {
   const abs = resolve(filePath);
   if (isSensitivePath(abs)) return { error: 'Archivo sensible: no se puede operar' };
   if (!isInsideAllowed(config, abs)) return { error: 'Fuera de carpetas autorizadas' };
