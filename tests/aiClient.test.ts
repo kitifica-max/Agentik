@@ -155,6 +155,24 @@ describe('bucle del agente con cualquier proveedor', () => {
     expect((s2.requests[1]!.messages.at(-1)!.content as any[])[0].content).toBe('corto'); // sin "(truncado)" si cabe
   });
 
+  it('guarda en el historial del modelo qué hizo en el turno (sin cambiar la respuesta visible)', async () => {
+    const db = memoryDb();
+    const { provider, requests } = script([
+      step('', [{ id: 'c1', name: 'create_folder', input: { path: join(allowed, 'Fotos') } }]),
+      step('Listo, creé Fotos'),
+      step('Deshecho'),
+    ]);
+    const ai = client(db, () => ({ provider, profile: local }));
+    const r = await ai.chat('crea Fotos');
+    expect(r.reply).toBe('Listo, creé Fotos'); // lo visible no cambia
+    await ai.chat('deshaz eso');
+    const prev = requests[2]!.messages.find((m) => m.role === 'assistant' && typeof m.content === 'string')!.content as string;
+    expect(prev).toContain('Listo, creé Fotos');
+    expect(prev).toContain('[acciones de este turno]');
+    expect(prev).toContain('create_folder Fotos');
+    expect(prev).not.toContain(allowed); // solo nombre base, sin ruta completa
+  });
+
   it('se detiene en el límite de rondas y lo avisa', async () => {
     const db = memoryDb();
     const loop = step('', [{ id: 'x', name: 'list_folder', input: { path: allowed } }]);

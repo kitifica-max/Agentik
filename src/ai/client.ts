@@ -12,6 +12,7 @@ import { executeFileOp, organizeFolder, logAudit } from '../files/fileTools.js';
 import { runCommand, isBlockedCommand } from '../shell/shell.js';
 import { recordUsage, profilePrice } from './cost.js';
 import { compactToolResults } from './compact.js';
+import { actionLine, actionsBlock } from './actions.js';
 import { homedir } from 'node:os';
 
 const MAX_TOKENS = 8192;
@@ -364,6 +365,7 @@ export class AiClient {
     }));
 
     const toolNames = new Map<string, string>(); // tool_use_id → herramienta, para compactar resultados viejos
+    const actions: string[] = []; // una línea por herramienta exitosa, para que el siguiente turno pueda "deshacer"
     let replyText = '';
     let opsExecuted = 0;
     let proposedMemory: { tipo: string; contenido: string } | undefined;
@@ -409,6 +411,7 @@ export class AiClient {
           result = { success: false, message: `Error interno: ${e instanceof Error ? e.message : String(e)}` };
         }
         opsExecuted += result.ops ?? 0;
+        if (result.success) { const l = actionLine(tu.name, input, result.message); if (l) actions.push(l); }
         // sin contenido de archivos en logs; solo herramienta y resultado corto
         console.log(`[agentik] ${tu.name} -> ${result.success ? 'ok' : 'ERROR'}: ${result.message.split('\n')[0].slice(0, 160)}`);
         toolResults.push({
@@ -425,14 +428,14 @@ export class AiClient {
 
     if (stopped) {
       const reply = `Detenido.${opsExecuted > 0 ? ` Alcancé a ejecutar ${opsExecuted} ${opsExecuted === 1 ? 'operación' : 'operaciones'} antes de parar.` : ''}`;
-      this.sessionHistory.push({ role: 'assistant', content: reply }); // el historial sigue alternando usuario/asistente
+      this.sessionHistory.push({ role: 'assistant', content: reply + actionsBlock(actions) }); // el historial sigue alternando usuario/asistente
       return { reply, proposedMemory, opsExecuted, stopped: true };
     }
 
     if (hitLimit) replyText += `\n(Llegué al límite de ${MAX_TOOL_ROUNDS} rondas; pídeme continuar.)`;
 
     const finalReply = replyText.trim() || (opsExecuted > 0 ? `Listo. ${opsExecuted} operaciones ejecutadas.` : 'Listo.');
-    this.sessionHistory.push({ role: 'assistant', content: finalReply });
+    this.sessionHistory.push({ role: 'assistant', content: finalReply + actionsBlock(actions) });
     if (this.sessionHistory.length > 40) {
       this.sessionHistory = this.sessionHistory.slice(-30);
     }
