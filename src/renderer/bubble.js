@@ -1,4 +1,12 @@
 (function () {
+  // Estados vacíos: ilustraciones line-art (SVG en línea, sin recursos externos)
+  var EMPTY_ART = {
+    memory: '<rect x="30" y="12" width="60" height="62" rx="4"/><rect class="f" x="52" y="6" width="16" height="10" rx="2"/><path d="M42 36h36M42 48h24"/><path d="M96 20v8M92 24h8"/>',
+    files: '<path d="M16 28h30l8 8h50v44H16z"/><path d="M16 40h92"/><path d="M104 14v8M100 18h8"/><circle class="f" cx="38" cy="58" r="3"/><circle class="f" cx="52" cy="58" r="3"/><path d="M36 68q9 6 18 0"/>'
+  };
+  function emptyHtml(kind, text) {
+    return '<div class="empty-art"><svg viewBox="0 0 120 90" aria-hidden="true">' + EMPTY_ART[kind] + '</svg><span>' + text + '</span></div>';
+  }
   var api = window.agentik;
   var ch = api.channels;
 
@@ -117,7 +125,7 @@
       tabMemory.textContent = pending.length > 0 ? 'Memoria (' + pending.length + ')' : 'Memoria';
       tabMemory.classList.toggle('has-badge', pending.length > 0);
       if (!list || list.length === 0) {
-        memoryList.innerHTML = '<p class="muted">Sin recuerdos guardados.</p>';
+        memoryList.innerHTML = emptyHtml('memory', 'Sin recuerdos guardados.');
         return;
       }
       if (pending.length > 1) {
@@ -204,7 +212,7 @@
     api.invoke(ch.fileEditList).then(function (list) {
       fileEditList.innerHTML = '';
       if (!list || list.length === 0) {
-        fileEditList.innerHTML = '<p class="muted">Sin operaciones pendientes.</p>';
+        fileEditList.innerHTML = emptyHtml('files', 'Sin operaciones pendientes.');
         updateFilesBadge(0);
         return;
       }

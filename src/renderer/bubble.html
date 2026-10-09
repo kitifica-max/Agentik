@@ -32,6 +32,20 @@
 
     <section id="view-chat" class="view">
       <div id="messages" class="messages"></div>
+      <div class="chat-empty">
+        <svg viewBox="0 0 160 110" aria-hidden="true">
+          <rect x="14" y="14" width="110" height="74" rx="8"/>
+          <path d="M14 32h110"/>
+          <circle class="fill" cx="26" cy="23" r="3"/><circle class="fill" cx="38" cy="23" r="3"/><circle class="fill" cx="50" cy="23" r="3"/>
+          <circle class="pop" cx="69" cy="60" r="20"/>
+          <ellipse class="fill" cx="62" cy="55" rx="2.5" ry="4"/><ellipse class="fill" cx="76" cy="55" rx="2.5" ry="4"/>
+          <path d="M60 67q9 8 18 0"/>
+          <path class="fill" d="M112 70l32 14-14 4-4 14z"/>
+          <path d="M142 18v10M137 23h10M20 100v8M16 104h8"/>
+        </svg>
+        <p>Escríbeme algo</p>
+        <small>Puedo leer, buscar y ordenar tus archivos.</small>
+      </div>
       <div id="thinking" class="thinking" hidden>
         <span class="dot"></span><span class="dot"></span><span class="dot"></span>
         <button id="chat-stop" class="btn btn-xs btn-danger" type="button" title="Detener (Esc)">Detener</button>
